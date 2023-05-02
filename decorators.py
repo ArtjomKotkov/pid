@@ -1,16 +1,18 @@
 from typing import Type, TypeVar, Optional, Callable
 
-from pid_types import ProvidersType
 from provider import Provider
 from module import PidModule
 from unit import PidUnit
+
+
+ProviderType = Provider | Type
+ProvidersType = list[ProviderType]
 
 
 T = TypeVar('T')
 
 
 class Providers:
-
     @staticmethod
     def module(
         *,

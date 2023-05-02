@@ -1,3 +1,9 @@
+import re
+from typing import NamedTuple
+
+from provider import ProvidedUnit
+
+
 class Singleton(type):
     _instances = {}
 
@@ -7,19 +13,34 @@ class Singleton(type):
         return cls._instances[cls]
 
 
+class CoreUnit(NamedTuple):
+    dependency: ProvidedUnit
+    request_unresolved: bool
+
+
 class Core(metaclass=Singleton):
 
     def __init__(self):
-        self._dependency_map: dict[str, any] = {}
+        self._dependency_map: dict[str, ProvidedUnit] = {}
 
-    def remember(self, dependency: any) -> None:
-        dependency_name = dependency._class.__name__
+    def remember(self, dependency: ProvidedUnit) -> None:
+        dependency_name = dependency.name
 
         assert dependency_name not in self._dependency_map, f'Dependency {dependency_name} has duplicate, please rename it.'
 
         self._dependency_map[dependency_name] = dependency
 
-    def get(self, dependency_name: str) -> any:
+    def get(
+        self,
+        dependency_name: str,
+    ) -> CoreUnit:
+        provider_regex = re.compile(r'^Provider\[([a-zA-Z]+)]$')
+
+        if match := provider_regex.match(dependency_name):
+            dep_name = match.group(1)
+            assert dep_name in self._dependency_map, f'Dependency {dep_name} doesnt exists globally.'
+            return CoreUnit(dependency=self._dependency_map[dep_name], request_unresolved=True)
+
         assert dependency_name in self._dependency_map, f'Dependency {dependency_name} doesnt exists globally.'
 
-        return self._dependency_map[dependency_name]
+        return CoreUnit(dependency=self._dependency_map[dependency_name], request_unresolved=False)
