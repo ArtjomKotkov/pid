@@ -17,7 +17,7 @@ class Provider(Generic[T], ProvidedUnit, ResolveUnit):
         self._class = class_
 
         self._core = Core()
-        self._core.remember(self)
+        self._core.remember_dependency(self)
 
         self._dependency_map: dict[str, str] = {}
         self._owner: Optional[Any] = None
@@ -41,7 +41,8 @@ class Provider(Generic[T], ProvidedUnit, ResolveUnit):
         assert self._owner is not None, 'Provider is out of scope any modules and theirs resolvers.'
 
         self._owner.resolve(tag)
-        return self._owner._pool.get(self.name, tag)
+
+        return self._owner.provide_child(self.name, tag)
 
     def bound(self, owner: any) -> None:
         self._owner = owner

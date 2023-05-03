@@ -22,9 +22,9 @@ class DependencyResolver:
         self,
         dependency: ProvidedUnit,
         available_providers: Optional[list[ProvidedUnit]] = None,
+        own_providers: Optional[list[ProvidedUnit]] = None,
         parent: Optional[ProvidedUnit] = None,
         tag: Optional[str] = None,
-        is_module: bool = False,
     ) -> Any:
         self_resolved_dep = self._pool.get(dependency.name, tag)
         inherited_resolved_dep = self._shared_pool.get(dependency.name, tag)
@@ -32,33 +32,45 @@ class DependencyResolver:
         if self_resolved_dep:
             return self_resolved_dep
 
-        if inherited_resolved_dep:
+        if inherited_resolved_dep and dependency not in own_providers:
             return inherited_resolved_dep
 
-        if available_providers is not None:
-            errors = self._can_resolve(dependency, available_providers, parent)
-            if errors is not None:
-                error_string = '\nCurrent dependencies isn\'t provided in any bounded module.\n' + '\n'.join(' '.join(paths) for paths in errors)
-                raise CannotResolveDependency(error_string)
+        # if available_providers is not None:
+        #     errors = self._can_resolve(dependency, available_providers, parent)
+        #     if errors is not None:
+        #         error_string = '\nCurrent dependencies isn\'t provided in any bounded module.\n' + '\n'.join(' '.join(paths) for paths in errors)
+        #         raise CannotResolveDependency(error_string)
 
         unresolved_inner_deps = dependency.dependencies
+
+        if not all(
+            (
+                self._core.get(dep_name).dependency in available_providers
+                or self._shared_pool.has(dep_name, tag)
+            )
+            for dep_name
+            in unresolved_inner_deps.values()
+        ):
+            raise ValueError('INVALID')
 
         resolved_inner_dependencies = {}
         for key, dep_name in unresolved_inner_deps.items():
             core_unit = self._core.get(dep_name)
 
             resolved_inner_dependencies[key] = (
-                self.resolve(core_unit.dependency, available_providers)
+                self.resolve(
+                    core_unit.dependency,
+                    available_providers,
+                    own_providers=own_providers,
+                    tag=tag,
+                )
                 if not core_unit.request_unresolved
                 else core_unit.dependency
             )
 
-        if not is_module:
-            provided_dependency = dependency.provide(resolved_inner_dependencies)
-            self._pool.add(dependency.name, provided_dependency, tag)
-            return provided_dependency
-        else:
-            return dependency.provide(resolved_inner_dependencies)
+        provided_dependency = dependency.provide(resolved_inner_dependencies)
+        self._pool.add(dependency.name, provided_dependency, tag)
+        return provided_dependency
 
     def _can_resolve(
         self,

@@ -42,6 +42,9 @@ class SharedDependencyPool:
     def set(self, dependencies: dict[str, dict[str, any]]) -> None:
         self._dependencies = dependencies
 
+    def has(self, name: str, tag: Optional[str] = None) -> bool:
+        return name in self._dependencies.get(tag, {})
+
     def fill_from_main_pool(self, pool: DependencyPool) -> Self:
         deps_to_update = self._dependencies
 

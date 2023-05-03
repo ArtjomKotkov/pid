@@ -18,24 +18,20 @@ class TestDep:
 class TestProvider:
     def __init__(
         self,
-        dep: TestDep,
+        # dep: TestDep,
         resolved_some_dep: SomeDep,
-        unresolved_some_dep: Provider[SomeDep]
+        unresolved_some_dep: Provider[SomeDep],
     ):
-        resolved_tag = unresolved_some_dep.resolve('someTag')
-        resolved_untag = resolved_some_dep
-
-        resolved_tag.a = 14
-        resolved_untag.a = 20
-
-        print(resolved_tag.a, resolved_untag.a)
+        ...
 
 
 @Providers.module(
     providers=[SomeDep],
     exports=[SomeDep],
 )
-class SecondModule: ...
+class SecondModule:
+    def __init__(self, some: SomeDep):
+        ...
 
 
 @Providers.module(
@@ -47,36 +43,27 @@ class OneModule: ...
 
 @Providers.module(
     imports=[
-        OneModule,
+        # OneModule,
         SecondModule,
     ],
-    providers=[TestProvider],
+    providers=[
+        TestProvider,
+        SomeDep
+    ],
 )
 class RootModule:
     def __init__(
         self,
-        dep: TestProvider,
-        resolved_some_dep: SomeDep,
-        unresolved_some_dep: Provider[SomeDep]
+        resolved_dep: SomeDep,
+        unresolved_some_dep: Provider[SomeDep],
     ):
-        self._dep = dep
+        self._unresolved_some_dep = unresolved_some_dep
+        self._resolved_dep = resolved_dep
 
-        resolved_tag = unresolved_some_dep.resolve('someTag')
-        resolved_untag = resolved_some_dep
+    def test(self):
+        test = self._unresolved_some_dep.resolve('tag')
 
-        resolved_tag2 = unresolved_some_dep.resolve('someTag2')
-
-        print(resolved_tag.a, resolved_untag.a, resolved_tag2.a)
-
-    def start(self):
-        print(f'App started {self._dep._dep.a}')
-
-
-module2 = RootModule
-module2.resolve()
-
-# main_ = module()
-# main_.start()
-
+module = RootModule.resolve()
+module.test()
 
 a = 12

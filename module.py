@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Type, TypeVar, Optional
+from typing import Type, TypeVar, Optional, Any
 
 from dependency_pool import DependencyPool
 from dependency_pool.pool import SharedDependencyPool
@@ -30,6 +30,7 @@ class PidModule(Provider[T], ResolveUnit):
 
         self._pool = DependencyPool(shared_dependencies=self._exports)
         self._shared_pool = SharedDependencyPool()
+
         self._resolver = DependencyResolver(
             self._pool,
             self._shared_pool,
@@ -40,16 +41,36 @@ class PidModule(Provider[T], ResolveUnit):
             provider.bound(self)
 
     def resolve(self, tag: Optional[str] = None) -> T:
-        for module in self._imports:
-            module.resolve(tag)
-            self._shared_pool.merge(module._shared_pool)
+        if resolved_module := self._pool.get(self.name, tag):
+            return resolved_module
 
-        for provider in self._providers:
-            self._resolver.resolve(provider, self.available_providers, parent=self, tag=tag)
+        try:
+            for module in self._imports:
+                module.resolve(tag)
+                self._shared_pool.merge(module._shared_pool)
 
-        self._shared_pool.fill_from_main_pool(self._pool)
+            for provider in self._providers:
+                self._resolver.resolve(
+                    provider,
+                    self._providers,
+                    own_providers=self._providers,
+                    parent=self,
+                    tag=tag
+                )
 
-        return self._resolver.resolve(self, self.available_providers, is_module=True, tag=tag)
+            self._shared_pool.fill_from_main_pool(self._pool)
+
+            return self._resolver.resolve(
+                self,
+                self._providers,
+                own_providers=self._providers,
+                tag=tag
+            )
+        except RecursionError:
+            raise RecursionError('Recursion error means, that you are trying to resolve some dependencies manualy in class initializer. It\'s not allowed at the moment.\nPlease resolve your dependencies manually in class methods.')
+
+    def provide_child(self, name: str, tag: Optional[str] = None) -> Any:
+        return self._pool.get(name, tag)
 
     @property
     def name(self) -> str:
@@ -66,15 +87,3 @@ class PidModule(Provider[T], ResolveUnit):
     @property
     def imports(self) -> list[Provider]:
         return self._imports
-
-    @property
-    def available_providers(self) -> list[Provider]:
-        return list({*self._providers, *self.inherit_providers})
-
-    @property
-    def inherit_providers(self) -> list[Provider]:
-        providers = set(self._exports)
-        for module in self._imports:
-            providers.update(module.inherit_providers)
-
-        return list(providers)

@@ -1,5 +1,6 @@
 import re
-from typing import NamedTuple
+from collections import defaultdict
+from typing import NamedTuple, Optional
 
 from provider import ProvidedUnit
 
@@ -23,7 +24,7 @@ class Core(metaclass=Singleton):
     def __init__(self):
         self._dependency_map: dict[str, ProvidedUnit] = {}
 
-    def remember(self, dependency: ProvidedUnit) -> None:
+    def remember_dependency(self, dependency: ProvidedUnit) -> None:
         dependency_name = dependency.name
 
         assert dependency_name not in self._dependency_map, f'Dependency {dependency_name} has duplicate, please rename it.'
