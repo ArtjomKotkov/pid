@@ -11,28 +11,33 @@ class DependencyResolver:
     def __init__(
         self,
         pool: DependencyPool,
-        shared_pool: SharedDependencyPool,
+        inherited_pool: DependencyPool,
     ):
         self._pool = pool
-        self._shared_pool = shared_pool
+        self._inherited_pool = inherited_pool
 
         self._core = Core()
 
     def resolve(
         self,
         dependency: ProvidedUnit,
-        available_providers: Optional[list[ProvidedUnit]] = None,
-        own_providers: Optional[list[ProvidedUnit]] = None,
-        parent: Optional[ProvidedUnit] = None,
+        own_providers: list[ProvidedUnit],
         tag: Optional[str] = None,
+        use_shared: bool = True,
     ) -> Any:
+        own_providers = [*dependency._providers, *own_providers]
+
         self_resolved_dep = self._pool.get(dependency.name, tag)
-        inherited_resolved_dep = self._shared_pool.get(dependency.name, tag)
+        inherited_resolved_dep = self._inherited_pool.get(dependency.name, tag)
 
         if self_resolved_dep:
             return self_resolved_dep
 
-        if inherited_resolved_dep and dependency not in own_providers:
+        if (
+            use_shared
+            and dependency not in own_providers
+            and inherited_resolved_dep
+        ):
             return inherited_resolved_dep
 
         # if available_providers is not None:
@@ -45,8 +50,8 @@ class DependencyResolver:
 
         if not all(
             (
-                self._core.get(dep_name).dependency in available_providers
-                or self._shared_pool.has(dep_name, tag)
+                self._core.get(dep_name).dependency in own_providers
+                or self._inherited_pool.has(dep_name, tag)
             )
             for dep_name
             in unresolved_inner_deps.values()
@@ -58,15 +63,22 @@ class DependencyResolver:
             core_unit = self._core.get(dep_name)
 
             resolved_inner_dependencies[key] = (
-                self.resolve(
-                    core_unit.dependency,
-                    available_providers,
-                    own_providers=own_providers,
-                    tag=tag,
-                )
+                core_unit.dependency._resolve(tag)
                 if not core_unit.request_unresolved
                 else core_unit.dependency
             )
+
+
+            # resolved_inner_dependencies[key] = (
+            #     self.resolve(
+            #         core_unit.dependency,
+            #         tag=tag,
+            #         own_providers=own_providers,
+            #         use_shared=core_unit.dependency not in own_providers
+            #     )
+            #     if not core_unit.request_unresolved
+            #     else core_unit.dependency
+            # )
 
         provided_dependency = dependency.provide(resolved_inner_dependencies)
         self._pool.add(dependency.name, provided_dependency, tag)
