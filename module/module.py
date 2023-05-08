@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from typing import Type, TypeVar, Optional, Any
+from typing import Type, TypeVar, Optional
 
 from dependency_pool import DependencyPool, UnknownDependency
-from dependency_pool.pool import SharedDependencyPool
-from exceptions import CannotResolveDependency
-from provider import Provider, ProviderWrapper
-from resolver import DependencyResolver, ResolveUnit
-
+from shared import AbstractProvider
+from shared.exceptions import CannotResolveDependency
+from provider import Provider
 
 T = TypeVar('T')
 
 
-class PidModule(Provider[T], ResolveUnit):
+class PidModule(AbstractProvider[T]):
+    is_module = True
+
     def __init__(
         self,
         class_: Type[T],
@@ -20,34 +20,24 @@ class PidModule(Provider[T], ResolveUnit):
         exports: Optional[list[Provider]] = None,
         providers: Optional[list[Provider]] = None,
     ) -> None:
-        super().__init__(class_)
+        self._class = class_
 
         self._imports = imports or []
         self._exports = exports or []
-        self._providers = [
-            ProviderWrapper(provider)
-            for provider
-            in providers
-        ] or []
+        self._providers = providers or []
 
         self._pool = DependencyPool()
 
-    def _bound_providers(self) -> None:
-        for provider in self._providers:
-            provider.bound(self)
-
     def resolve(
         self,
-        node_pool: Optional[DependencyPool] = None,
+        inherit_pool: Optional[DependencyPool] = None,
         tag: Optional[str] = None,
     ) -> T:
-        resolved_module = self._pool.get(self.name, tag)
+        resolved_module = self._pool.get(self, tag)
 
-        if not isinstance(resolved_module, UnknownDependency):
+        if resolved_module is not UnknownDependency:
+            inherit_pool.merge(self._pool.with_dependencies(self._exports))
             return resolved_module
-
-        if not node_pool:
-            node_pool = DependencyPool()
 
         try:
             for module in self._imports:
@@ -57,35 +47,43 @@ class PidModule(Provider[T], ResolveUnit):
 
                 self._pool.merge(node_pool)
 
-            return self._resolve(node_pool, tag)
+            if not inherit_pool:
+                inherit_pool = DependencyPool()
+
+            return self._resolve(inherit_pool, tag)
 
         except RecursionError:
             raise RecursionError('Recursion error means, that you are trying to resolve some dependencies manualy in class initializer. It\'s not allowed at the moment.\nPlease resolve your dependencies manually in class methods.')
 
     def _resolve(
         self,
-        node_pool: Optional[DependencyPool] = None,
+        inherit_pool: Optional[DependencyPool] = None,
         tag: Optional[str] = None,
     ) -> T:
         for provider in self._providers:
-            provider.resolve(self._pool, tag)
+            resolved_provider = provider.resolve(
+                self._pool.exclude_dependencies(self._providers),
+                self._providers,
+                tag,
+            )
+            self._pool.add(provider, resolved_provider, tag)
 
-        node_pool.merge(self._pool.with_dependencies(self._exports))
+        inherit_pool.merge(self._pool.with_dependencies(self._make_exports()))
 
         return self._provide(tag)
 
     def _provide(self, tag:  Optional[str] = None) -> T:
         dependencies = {
-            key: self._pool.get(dep_name, tag)
-            for key, dep_name
-            in self.dependency_map.items()
+            key: self._pool.get(dependency, tag)
+            for key, dependency
+            in self.dependencies.items()
         }
 
         unknown_dependencies = [
-            (key, self.dependency_map[key],)
+            (key, self.dependencies[key],)
             for key, dep
             in dependencies.items()
-            if isinstance(dep, UnknownDependency)
+            if dep is UnknownDependency
         ]
 
         if unknown_dependencies:
@@ -94,24 +92,21 @@ class PidModule(Provider[T], ResolveUnit):
 
             raise CannotResolveDependency(error_msg)
 
-        return self.provide(dependencies)
+        provided_module = self._class(**dependencies)
+        self._pool.add(self, provided_module, tag)
 
-    def provide(self, dependencies: dict[str, Any]) -> T:
-        return self._class(**dependencies)
+        return provided_module
 
-    def provide_child(self, name: str, tag: Optional[str] = None) -> Any:
-        return self._pool.get(name, tag)
+    def _make_exports(self) -> list[Provider]:
+        export_providers = []
 
-    @property
-    def dependency_map(self) -> dict[str, str]:
-        init_method = self._class.__init__
+        for export_unit in self._exports:
+            if export_unit.is_module:
+                export_providers.extend(export_unit._make_exports())
+            else:
+                export_providers.append(export_unit)
 
-        try:
-            init_annotations = init_method.__annotations__
-        except AttributeError:
-            return {}
-
-        return {key: provider_name for key, provider_name in init_annotations.items()}
+        return export_providers
 
     @property
     def name(self) -> str:
@@ -120,11 +115,3 @@ class PidModule(Provider[T], ResolveUnit):
     @property
     def providers(self) -> list[Provider]:
         return self._providers
-
-    @property
-    def exports(self) -> list[Provider]:
-        return self._exports
-
-    @property
-    def imports(self) -> list[Provider]:
-        return self._imports
