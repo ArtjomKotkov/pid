@@ -19,17 +19,22 @@ class Dependency: ...
 )
 class ModuleWithDep:
     def __init__(self, dependency: Dependency):
-        print(dependency)
+        print('ModuleWithDep', dependency)
 
 
+@Providers.injectable(providers=[Dependency])
+class FourthDependency:
+    def __init__(self, dependency: Dependency):
+        print('FourthDependency', dependency)
 
-@Providers.injectable()
+
+@Providers.injectable(providers=[])
 class ThirdDependency:
     def __init__(self, dependency: Dependency):
-        print(dependency)
+        print('ThirdDependency', dependency)
 
 
-@Providers.injectable(providers=[ThirdDependency, Dependency])
+@Providers.injectable(providers=[ThirdDependency, FourthDependency])
 class SecondDependency: ...
 
 
@@ -41,7 +46,7 @@ class SecondDependency: ...
 )
 class RootModule:
     def __init__(self, dependency: Dependency):
-        print(dependency)
+        print('RootModule', dependency)
 
 
 module = BootStrap.resolve(RootModule)

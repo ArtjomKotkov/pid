@@ -42,46 +42,56 @@ class Provider(IProvider[T]):
 
     def resolve(
         self,
-        module_node_pool: Optional[DependencyPool] = None,
+        inherit_pool: Optional[DependencyPool] = None,
         available_providers: Optional[list[IProvider]] = None,
         tag: Optional[str] = None,
     ) -> T:
-        resolved_provider = self._pool.get(self, tag)
-
-        if resolved_provider is not UnknownDependency:
-            return resolved_provider
-
         try:
             if not available_providers:
                 available_providers = []
 
-            if not module_node_pool:
-                module_node_pool = DependencyPool()
+            if not inherit_pool:
+                inherit_pool = DependencyPool()
 
-            return self._resolve(module_node_pool, available_providers, tag)
+            return self._resolve(inherit_pool, available_providers, tag)
 
         except RecursionError:
             raise RecursionError('Recursion error means, that you are trying to resolve some dependencies manualy in class initializer. It\'s not allowed at the moment.\nPlease resolve your dependencies manually in class methods.')
 
     def _resolve(
         self,
-        module_node_pool: DependencyPool,
+        inherit_pool: DependencyPool,
         available_providers: list[IProvider],
         tag: str,
     ) -> T:
         updated_available_providers = [*available_providers, *self._providers]
 
+        inherit_pool_without_providers = inherit_pool.exclude_dependencies(self._providers)
+
         for provider in self._providers:
-            resolved_provider = provider.resolve(module_node_pool, updated_available_providers, tag)
+            resolved_provider = self._pool.get(provider, tag)
+
+            if resolved_provider is not UnknownDependency:
+                continue
+
+            self_pool_copy = self._pool.copy()
+            self_pool_copy.merge(inherit_pool_without_providers)
+
+            resolved_provider = provider.resolve(self_pool_copy, updated_available_providers, tag)
+
+            self._pool.merge(self_pool_copy)
             self._pool.add(provider, resolved_provider, tag)
 
-        dependencies = self._prepare(module_node_pool, updated_available_providers, tag)
+        dependencies = self._prepare(inherit_pool, updated_available_providers, tag)
+        resolved_provider = self._provide(dependencies)
 
-        return self._provide(dependencies)
+        inherit_pool.merge(self._pool.exclude_dependencies(self._providers))
+
+        return resolved_provider
 
     def _prepare(
         self,
-        module_node_pool: DependencyPool,
+        inherit_pool: DependencyPool,
         available_providers: list[IProvider],
         tag: str,
     ) -> dict[str, Any]:
@@ -92,13 +102,16 @@ class Provider(IProvider[T]):
             resolved_dependency = self._pool.get(provider, tag)
 
             if resolved_dependency is UnknownDependency:
-                resolved_dependency = module_node_pool.get(provider, tag)
+                resolved_dependency = inherit_pool.get(provider, tag)
 
             if resolved_dependency is UnknownDependency:
-                if provider not in available_providers:
+                provider = next((av_provider for av_provider in available_providers if provider.name == av_provider.name), None)
+
+                if provider is None:
                     raise CannotResolveDependency(f'[{self.name}] {key}')
 
-                resolved_dependency = provider.resolve(module_node_pool, available_providers, tag)
+                resolved_dependency = provider.resolve(inherit_pool, available_providers, tag)
+                self._pool.add(provider, resolved_dependency, tag)
 
             dependencies[key] = resolved_dependency
 

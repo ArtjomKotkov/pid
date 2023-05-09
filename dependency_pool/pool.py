@@ -4,7 +4,7 @@ from collections import defaultdict
 from typing import Optional
 
 from .pool_types import UnknownDependency
-from shared import IProvider
+from shared import IProvider, merge_deep
 
 
 class DependencyPool:
@@ -63,17 +63,15 @@ class DependencyPool:
         return new_pool
 
     def merge(self, pool: DependencyPool) -> DependencyPool:
-        merged_deps = {}
-
-        for tag, values in pool.dependencies.items():
-            merged_deps[tag] = {
-                **self._dependencies[tag],
-                **values,
-            }
-
-        self.set(merged_deps)
+        self.set(merge_deep(self.dependencies, pool.dependencies))
 
         return self
+
+    def copy(self) -> DependencyPool:
+        new_pool = DependencyPool()
+        new_pool.set(self._dependencies)
+
+        return new_pool
 
     @property
     def dependencies(self) -> dict[str, dict[str, any]]:

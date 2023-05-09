@@ -79,13 +79,21 @@ class PidModule(IProvider[T]):
         inherit_pool: Optional[DependencyPool] = None,
         tag: Optional[str] = None,
     ) -> T:
+        providers_pool = self._pool.exclude_dependencies(self._providers)
+
         for provider in self._providers:
+            resolved_provider = self._pool.get(provider, tag)
+
+            if resolved_provider is not UnknownDependency:
+                continue
+
             resolved_provider = provider.resolve(
-                self._pool.exclude_dependencies(self._providers),
+                providers_pool,
                 self._providers,
                 tag,
             )
             self._pool.add(provider, resolved_provider, tag)
+            self._pool.merge(providers_pool)
 
         inherit_pool.merge(self._pool.with_dependencies(self._make_exports()))
 
