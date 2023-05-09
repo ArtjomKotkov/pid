@@ -2,31 +2,46 @@ from __future__ import annotations
 
 from decorators import Providers
 
-from random import randint
-
-from provider import Provider
+from bootstrap.bootstrap import BootStrap
 
 
-class Dependency(str):
-    def __init__(self, random_: int):
-        self.random_ = random_
-
-
-def dependency_factory() -> Dependency:
-    return Dependency(randint(1, 100))
-
-
-dependency_provider = Provider(class_=Dependency, factory=dependency_factory)
+@Providers.injectable()
+class Dependency: ...
 
 
 @Providers.module(
     providers=[
-        dependency_provider,
+        Dependency,
+    ],
+    exports=[
+        Dependency,
     ]
 )
+class ModuleWithDep:
+    def __init__(self, dependency: Dependency):
+        print(dependency)
+
+
+
+@Providers.injectable()
+class ThirdDependency:
+    def __init__(self, dependency: Dependency):
+        print(dependency)
+
+
+@Providers.injectable(providers=[ThirdDependency, Dependency])
+class SecondDependency: ...
+
+
+@Providers.module(
+    imports=[ModuleWithDep],
+    providers=[
+        SecondDependency,
+    ],
+)
 class RootModule:
-    def __init__(self, dependency: dependency_provider):
-        print(dependency.random_)
+    def __init__(self, dependency: Dependency):
+        print(dependency)
 
 
-module = RootModule.resolve()
+module = BootStrap.resolve(RootModule)

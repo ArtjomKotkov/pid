@@ -1,33 +1,51 @@
 from __future__ import annotations
 
-from typing import Type, TypeVar, Optional
+from typing import Type, TypeVar, Optional, Any, get_type_hints
 
+from bootstrap.utils import get_metadata
 from dependency_pool import DependencyPool, UnknownDependency
-from shared import AbstractProvider
+from shared import IProvider
 from shared.exceptions import CannotResolveDependency
-from provider import Provider
 
 T = TypeVar('T')
 
 
-class PidModule(AbstractProvider[T]):
+class PidModule(IProvider[T]):
     is_module = True
-    _factory = None
 
     def __init__(
         self,
         class_: Type[T],
-        imports: Optional[list[PidModule]] = None,
-        exports: Optional[list[Provider]] = None,
-        providers: Optional[list[Provider]] = None,
+        imports: Optional[list[Any]] = None,
+        exports: Optional[list[Any]] = None,
+        providers: Optional[list[Any]] = None,
     ) -> None:
         self._class = class_
 
-        self._imports = imports or []
-        self._exports = exports or []
-        self._providers = providers or []
+        self._imports: list[IProvider] = [
+            get_metadata(import_).make_providable() for import_ in imports
+        ] if imports else []
+
+        self._exports: list[IProvider] = [
+            get_metadata(export_).make_providable() for export_ in exports
+        ] if exports else []
+
+        self._providers: list[IProvider] = [
+            get_metadata(provider_).make_providable() for provider_ in providers
+        ] if providers else []
 
         self._pool = DependencyPool()
+
+    @classmethod
+    def make_from_class_metadata(cls, class_: Any) -> PidModule:
+        metadata = get_metadata(class_)
+
+        return PidModule(
+            class_=class_,
+            imports=metadata.imports,
+            providers=metadata.providers,
+            exports=metadata.exports,
+        )
 
     def resolve(
         self,
@@ -98,7 +116,7 @@ class PidModule(AbstractProvider[T]):
 
         return provided_module
 
-    def _make_exports(self) -> list[Provider]:
+    def _make_exports(self) -> list[IProvider]:
         export_providers = []
 
         for export_unit in self._exports:
@@ -114,5 +132,23 @@ class PidModule(AbstractProvider[T]):
         return self._class.__name__
 
     @property
-    def providers(self) -> list[Provider]:
+    def providers(self) -> list[IProvider]:
         return self._providers
+
+    @property
+    def dependencies(self) -> dict[str, IProvider]:
+        method = self._class.__init__
+
+        try:
+            init_annotations = get_type_hints(method)
+        except AttributeError:
+            return {}
+
+        if 'return' in init_annotations:
+            del init_annotations['return']
+
+        return {
+            key: get_metadata(class_).make_providable()
+            for key, class_
+            in init_annotations.items()
+        }

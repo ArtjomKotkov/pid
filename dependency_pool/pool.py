@@ -4,27 +4,27 @@ from collections import defaultdict
 from typing import Optional
 
 from .pool_types import UnknownDependency
-from shared import AbstractProvider
+from shared import IProvider
 
 
 class DependencyPool:
     def __init__(self):
         self._dependencies: dict[str, dict[str, any]] = defaultdict(dict)
 
-    def add(self, provider: AbstractProvider, resolved_dependency: any, tag: Optional[str] = None) -> None:
+    def add(self, provider: IProvider, resolved_dependency: any, tag: Optional[str] = None) -> None:
         self._dependencies[tag][provider.name] = resolved_dependency
 
-    def get(self, provider: AbstractProvider, tag: Optional[str] = None) -> any:
+    def get(self, provider: IProvider, tag: Optional[str] = None) -> any:
         return self._dependencies.get(tag, {}).get(provider.name, UnknownDependency)
 
     def set(self, dependencies: dict[str, dict[str, any]]) -> None:
         self._dependencies.clear()
         self._dependencies.update(dependencies)
 
-    def has(self, provider: AbstractProvider, tag: Optional[str] = None) -> bool:
+    def has(self, provider: IProvider, tag: Optional[str] = None) -> bool:
         return provider in self._dependencies.get(tag, {})
 
-    def with_dependencies(self, dependencies: list[AbstractProvider]) -> DependencyPool:
+    def with_dependencies(self, dependencies: list[IProvider]) -> DependencyPool:
         requested_dependency_names = [dep.name for dep in dependencies]
 
         filtered_dependencies = {
@@ -43,7 +43,7 @@ class DependencyPool:
 
         return new_pool
 
-    def exclude_dependencies(self, dependencies: list[AbstractProvider]) -> DependencyPool:
+    def exclude_dependencies(self, dependencies: list[IProvider]) -> DependencyPool:
         requested_dependency_names = [dep.name for dep in dependencies]
 
         filtered_dependencies = {

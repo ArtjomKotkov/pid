@@ -1,2 +1,2 @@
 from .exceptions import CannotResolveDependency
-from .a_provider import AbstractProvider
+from .a_provider import IProvider

@@ -1,36 +1,49 @@
 from __future__ import annotations
 
-from typing import Type, TypeVar, Optional, Callable, Any
+from typing import Type, TypeVar, Optional, Callable, Any, get_type_hints
 
+from bootstrap.utils import get_metadata
 from dependency_pool import DependencyPool, UnknownDependency
-from shared import AbstractProvider
+from shared import IProvider
 from shared.exceptions import CannotResolveDependency
 
 
 T = TypeVar('T')
 
 
-class Provider(AbstractProvider[T]):
+class Provider(IProvider[T]):
     is_module = False
 
     def __init__(
         self,
         class_: Type[T],
-        providers: Optional[list[Provider]] = None,
+        providers: Optional[list[Type[T]]] = None,
         factory: Optional[Callable[[*Type[Provider]], T]] = None
-    ) -> T:
+    ):
         super().__init__()
 
         self._class = class_
-        self._providers = providers or []
+        self._providers: list[IProvider] = [
+            get_metadata(provider_).make_providable() for provider_ in providers
+        ] if providers else []
+
         self._factory = factory
 
         self._pool = DependencyPool()
 
+    @classmethod
+    def from_class_metadata(cls, class_: Any) -> Provider:
+        metadata = get_metadata(class_)
+
+        return Provider(
+            class_=class_,
+            providers=metadata.providers,
+        )
+
     def resolve(
         self,
         module_node_pool: Optional[DependencyPool] = None,
-        available_providers: Optional[list[AbstractProvider]] = None,
+        available_providers: Optional[list[IProvider]] = None,
         tag: Optional[str] = None,
     ) -> T:
         resolved_provider = self._pool.get(self, tag)
@@ -53,7 +66,7 @@ class Provider(AbstractProvider[T]):
     def _resolve(
         self,
         module_node_pool: DependencyPool,
-        available_providers: list[AbstractProvider],
+        available_providers: list[IProvider],
         tag: str,
     ) -> T:
         updated_available_providers = [*available_providers, *self._providers]
@@ -69,7 +82,7 @@ class Provider(AbstractProvider[T]):
     def _prepare(
         self,
         module_node_pool: DependencyPool,
-        available_providers: list[AbstractProvider],
+        available_providers: list[IProvider],
         tag: str,
     ) -> dict[str, Any]:
         provider_dependencies = self.dependencies
@@ -104,3 +117,21 @@ class Provider(AbstractProvider[T]):
     @property
     def name(self) -> str:
         return self._class.__name__
+
+    @property
+    def dependencies(self) -> dict[str, IProvider]:
+        method = self._class.__init__ if self._factory is None else self._factory
+
+        try:
+            init_annotations = get_type_hints(method)
+        except AttributeError:
+            return {}
+
+        if 'return' in init_annotations:
+            del init_annotations['return']
+
+        return {
+            key: get_metadata(class_).make_providable()
+            for key, class_
+            in init_annotations.items()
+        }
