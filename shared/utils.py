@@ -24,19 +24,3 @@ def merge_deep(dict1: DictOfDicts, dict2: DictOfDicts) -> DictOfDicts:
             result[key] = value2 or value1
 
     return result
-
-
-# a = {
-#     '2': 'a'
-# }
-#
-# b = {
-#     '1': {
-#         '1.1': 'b',
-#         '1.2': 'b'
-#     },
-#     '2': 'b'
-# }
-#
-# c = merge_deep(a, b)
-# print(c)
