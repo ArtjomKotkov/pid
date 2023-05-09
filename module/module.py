@@ -12,6 +12,7 @@ T = TypeVar('T')
 
 class PidModule(AbstractProvider[T]):
     is_module = True
+    _factory = None
 
     def __init__(
         self,

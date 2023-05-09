@@ -43,24 +43,6 @@ class DependencyPool:
 
         return new_pool
 
-    def with_dependencies_update(self, dependencies: list[AbstractProvider]) -> DependencyPool:
-        requested_dependency_names = [dep.name for dep in dependencies]
-
-        filtered_dependencies = {
-            tag: {
-                name: dependency
-                for name, dependency
-                in dependency_pairs.items()
-                if name in requested_dependency_names
-            }
-            for tag, dependency_pairs
-            in self._dependencies.items()
-        }
-
-        self.set(filtered_dependencies)
-
-        return self
-
     def exclude_dependencies(self, dependencies: list[AbstractProvider]) -> DependencyPool:
         requested_dependency_names = [dep.name for dep in dependencies]
 
