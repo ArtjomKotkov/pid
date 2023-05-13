@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Type, TypeVar, Optional, Any, get_type_hints
 
 from bootstrap.utils import get_metadata
-from dependency_pool import DependencyPool, UnknownDependency
+from dependency_pool import DependencyPool, UnknownDependency, ProvidersPool
 from shared import IProvider
 from shared.exceptions import CannotResolveDependency
 
@@ -35,6 +35,7 @@ class PidModule(IProvider[T]):
         ] if providers else []
 
         self._pool = DependencyPool()
+        self._inherit_providers_pool = ProvidersPool()
 
     @classmethod
     def make_from_class_metadata(cls, class_: Any) -> PidModule:
@@ -49,53 +50,30 @@ class PidModule(IProvider[T]):
 
     def resolve(
         self,
-        inherit_pool: Optional[DependencyPool] = None,
         tag: Optional[str] = None,
     ) -> T:
         resolved_module = self._pool.get(self, tag)
 
         if resolved_module is not UnknownDependency:
-            inherit_pool.merge(self._pool.with_dependencies(self._exports))
             return resolved_module
 
         try:
-            for module in self._imports:
-                node_pool = DependencyPool()
-
-                module.resolve(node_pool, tag)
-
-                self._pool.merge(node_pool)
-
-            if not inherit_pool:
-                inherit_pool = DependencyPool()
-
-            return self._resolve(inherit_pool, tag)
-
+            return self._resolve(tag)
         except RecursionError:
             raise RecursionError('Recursion error means, that you are trying to resolve some dependencies manualy in class initializer. It\'s not allowed at the moment.\nPlease resolve your dependencies manually in class methods.')
 
     def _resolve(
         self,
-        inherit_pool: Optional[DependencyPool] = None,
         tag: Optional[str] = None,
     ) -> T:
-        providers_pool = self._pool.exclude_dependencies(self._providers)
+        for module in self._imports:
+            module.resolve(tag)
+            export_pool = module.make_export_providers_pool()
+
+            self._inherit_providers_pool.merge(export_pool)
 
         for provider in self._providers:
-            resolved_provider = self._pool.get(provider, tag)
-
-            if resolved_provider is not UnknownDependency:
-                continue
-
-            resolved_provider = provider.resolve(
-                providers_pool,
-                self._providers,
-                tag,
-            )
-            self._pool.add(provider, resolved_provider, tag)
-            self._pool.merge(providers_pool)
-
-        inherit_pool.merge(self._pool.with_dependencies(self._make_exports()))
+            self.resolve_child(provider, tag)
 
         return self._provide(tag)
 
@@ -123,6 +101,38 @@ class PidModule(IProvider[T]):
         self._pool.add(self, provided_module, tag)
 
         return provided_module
+
+    def resolve_child(self, provider: IProvider, tag: Optional[str] = None) -> Any:
+        own_providers_pool = self._make_own_providers_pool(tag)
+        child_providers_pool = self._inherit_providers_pool.copy().merge(own_providers_pool)
+
+        if not child_providers_pool.has_strict(provider, tag):
+            raise CannotResolveDependency()
+
+        resolved_provider = self._pool.get(provider, tag)
+
+        if resolved_provider is not UnknownDependency:
+            return resolved_provider
+
+        resolved_provider = provider.resolve(
+            child_providers_pool,
+            tag,
+        )
+
+        self._pool.add(provider, resolved_provider, tag)
+
+        return resolved_provider
+
+    def _make_own_providers_pool(self, tag: Optional[str] = None) -> ProvidersPool:
+        pool = ProvidersPool()
+
+        for provider in self._providers:
+            pool.add(provider, tag)
+
+        return pool
+
+    def make_export_providers_pool(self) -> ProvidersPool:
+        return self._inherit_providers_pool.with_providers(self._make_exports())
 
     def _make_exports(self) -> list[IProvider]:
         export_providers = []

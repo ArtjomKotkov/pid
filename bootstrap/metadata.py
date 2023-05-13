@@ -24,7 +24,7 @@ class MetaData(IMetaData):
         self.exports = exports
         self.providers = providers
 
-    def make_providable(self) -> IProvider:
+    def make_providable(self, owner: IProvider) -> IProvider:
         if self.is_module:
             return PidModule(
                 class_=self.class_,
@@ -36,4 +36,5 @@ class MetaData(IMetaData):
             return Provider(
                 class_=self.class_,
                 providers=self.providers,
+                owner=owner,
             )

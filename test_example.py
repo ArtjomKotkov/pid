@@ -22,9 +22,16 @@ class ModuleWithDep:
         print('ModuleWithDep', dependency)
 
 
-@Providers.injectable(providers=[Dependency])
-class FourthDependency:
+@Providers.injectable()
+class SomeDependency:
+    # неправильно он получает тут
     def __init__(self, dependency: Dependency):
+        print('SomeDependency', dependency)
+
+
+@Providers.injectable()
+class FourthDependency:
+    def __init__(self, dependency: Dependency, someDependency: SomeDependency):
         print('FourthDependency', dependency)
 
 
@@ -34,14 +41,17 @@ class ThirdDependency:
         print('ThirdDependency', dependency)
 
 
-@Providers.injectable(providers=[ThirdDependency, FourthDependency])
-class SecondDependency: ...
+@Providers.injectable(providers=[ThirdDependency, FourthDependency, Dependency])
+class SecondDependency():
+    def __init__(self, dependency: Dependency): ...
 
 
 @Providers.module(
     imports=[ModuleWithDep],
     providers=[
         SecondDependency,
+        SomeDependency,
+        Dependency,
     ],
 )
 class RootModule:
