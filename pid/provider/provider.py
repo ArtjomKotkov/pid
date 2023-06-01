@@ -31,19 +31,20 @@ class Provider(IProvider[T]):
 
         self._factory = factory
 
-        self._owner = owner
+        self.owner = owner
 
         self._pool = DependencyPool()
+        self._own_providers_pool = ProvidersPool()
         self._inherit_providers_pool = ProvidersPool()
+
+    def set_providers_pool(self, pool: ProvidersPool) -> None:
+        self._inherit_providers_pool = pool
 
     def resolve(
         self,
-        inherit_providers_pool: ProvidersPool,
         tag: Optional[str] = None,
     ) -> T:
         try:
-            self._inherit_providers_pool = inherit_providers_pool
-
             return self._resolve(tag)
 
         except RecursionError:
@@ -51,8 +52,14 @@ class Provider(IProvider[T]):
 
     def _resolve(
         self,
-        tag: str,
+        tag: Optional[str] = None,
     ) -> T:
+        self._own_providers_pool = self._make_own_providers_pool()
+        child_providers_pool = self._make_child_providers_pool()
+
+        for provider in self._providers:
+            provider.set_providers_pool(child_providers_pool)
+
         for provider in self._providers:
             self.resolve_child(provider, tag)
 
@@ -63,7 +70,7 @@ class Provider(IProvider[T]):
 
     def _prepare(
         self,
-        tag: str,
+        tag: Optional[str] = None,
     ) -> dict[str, Any]:
         provider_dependencies = self.dependencies
 
@@ -74,10 +81,10 @@ class Provider(IProvider[T]):
             if resolved_dependency is not Unknown:
                 dependencies[key] = resolved_dependency
 
-            elif self._inherit_providers_pool.has_by_metadata(metadata, tag):
-                related_provider = self._inherit_providers_pool.get_by_metadata(metadata, tag)
+            elif self._inherit_providers_pool.has_by_metadata(metadata):
+                related_provider = self._inherit_providers_pool.get_by_metadata(metadata)
 
-                dependencies[key] = related_provider._owner.resolve_child(related_provider, tag)
+                dependencies[key] = related_provider.owner.resolve_child(related_provider, tag)
             else:
                 raise CannotResolveDependency(f'[{self.name}] {key}')
 
@@ -90,33 +97,27 @@ class Provider(IProvider[T]):
             return self._factory(**dependencies)
 
     def resolve_child(self, provider: IProvider, tag: Optional[str] = None) -> Any:
-        own_providers_pool = self._make_own_providers_pool(tag)
-        child_providers_pool = self._inherit_providers_pool.copy().merge(own_providers_pool)
-
-        if not child_providers_pool.has(provider, tag):
-            raise CannotResolveDependency()
-
         resolved_provider = self._pool.get(provider, tag)
 
         if resolved_provider is not Unknown:
             return resolved_provider
 
-        resolved_provider = provider.resolve(
-            child_providers_pool,
-            tag,
-        )
+        resolved_provider = provider.resolve(tag)
 
         self._pool.add(provider, resolved_provider, tag)
 
         return resolved_provider
 
-    def _make_own_providers_pool(self, tag: Optional[str] = None) -> ProvidersPool:
+    def _make_own_providers_pool(self) -> ProvidersPool:
         pool = ProvidersPool()
 
         for provider in self._providers:
-            pool.add(provider, tag)
+            pool.add(provider)
 
         return pool
+
+    def _make_child_providers_pool(self) -> ProvidersPool:
+        return self._inherit_providers_pool.copy().merge(self._own_providers_pool)
 
     @property
     def name(self) -> str:
