@@ -1,9 +1,9 @@
 from typing import Type, TypeVar, Optional, Callable, Any
 
-from provider import Provider
-from module import PidModule
-from bootstrap.const import METADATA_ATTRIBUTE
-from bootstrap.metadata import MetaData
+from ..provider import Provider
+from ..module import PidModule
+from ..bootstrap.const import METADATA_ATTRIBUTE
+from ..bootstrap.metadata import MetaData
 
 
 ProviderType = Provider | Type
@@ -13,7 +13,7 @@ ProvidersType = list[ProviderType]
 T = TypeVar('T')
 
 
-class Providers:
+class Pid:
     @staticmethod
     def module(
         *,
@@ -43,6 +43,7 @@ class Providers:
     def injectable(
         *,
         providers: Optional[Any] = None,
+        factory: Optional[Callable[[*Type[Provider]], T]] = None
     ) -> Callable:
         def wrapper(class_: Type[T]) -> Provider:
             setattr(
@@ -54,6 +55,7 @@ class Providers:
                     imports=[],
                     exports=[],
                     providers=providers or [],
+                    factory=factory,
                 )
             )
 

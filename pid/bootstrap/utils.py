@@ -2,7 +2,8 @@ from typing import Type, TypeVar
 
 from .const import METADATA_ATTRIBUTE
 from .i_metadata import IMetaData
-from .exceptions import ClassIsNotInjectable
+
+from ..shared import ClassIsNotInjectable
 
 
 T = TypeVar('T')
