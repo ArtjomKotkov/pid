@@ -16,6 +16,6 @@ class BootStrap:
             raise ClassIsNotInjectable(class_.__name__)
 
         metadata = get_metadata(class_)
-        providable = metadata.make_providable(None)
+        providable = metadata.make_providable()
 
         return providable.resolve(tag)

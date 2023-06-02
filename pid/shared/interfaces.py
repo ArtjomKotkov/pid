@@ -17,7 +17,6 @@ class IProvider(Generic[T]):
 
     is_module: bool
     name: str
-    owner: IProvider
 
     resolve: Callable[[Optional[str]], T]
     resolve_child: Callable[[IProvider, Optional[str]], T]
@@ -44,4 +43,4 @@ class IMetaData:
 
     name: str
 
-    make_providable: Callable[[Optional[IProvider]], IProvider]
+    make_providable: Callable[[], IProvider]

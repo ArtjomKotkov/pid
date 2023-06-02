@@ -29,7 +29,7 @@ class MetaData(IMetaData):
     def name(self) -> str:
         return self.class_.__name__
 
-    def make_providable(self, owner: Optional[IProvider]) -> IProvider:
+    def make_providable(self) -> IProvider:
         if self.is_module:
             return PidModule(
                 class_=self.class_,
@@ -41,6 +41,5 @@ class MetaData(IMetaData):
             return Provider(
                 class_=self.class_,
                 providers=self.providers,
-                owner=owner,
                 factory=self.factory,
             )
