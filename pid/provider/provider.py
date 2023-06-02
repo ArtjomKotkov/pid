@@ -58,8 +58,7 @@ class Provider(IProvider[T]):
         for provider in self._providers:
             provider.set_providers_pool(child_providers_pool)
 
-        dependencies = self._prepare(tag)
-        resolved_provider = self._provide(dependencies)
+        resolved_provider = self._provide(tag)
 
         self._resolve_pool.add(resolved_provider, tag)
 
@@ -99,7 +98,9 @@ class Provider(IProvider[T]):
 
         return dependencies
 
-    def _provide(self, dependencies: dict[str, Any]) -> T:
+    def _provide(self, tag: ResolveTag = None) -> T:
+        dependencies = self._prepare(tag)
+
         if self._factory is None:
             return self._class(**dependencies)
         else:

@@ -4,7 +4,12 @@ from typing import Type, TypeVar, Optional, Any, get_type_hints, get_origin, get
 
 from ..bootstrap.utils import get_metadata
 from ..pools import Unknown, ProvidersPool, ResolvePool
-from ..shared import IProvider, IModule, Dependency, CannotResolveDependency, UndefinedExport, IMetaData, ResolveTag
+from ..shared import (
+    IProvider, IModule,
+    Dependency, CannotResolveDependency,
+    UndefinedExport, IMetaData,
+    ResolveTag,
+)
 
 
 T = TypeVar('T')
@@ -83,8 +88,7 @@ class PidModule(IProvider[T]):
         for provider in self._providers:
             provider.set_providers_pool(child_providers_pool)
 
-        dependencies = self._prepare(tag)
-        resolved_module = self._provide(dependencies)
+        resolved_module = self._provide(tag)
 
         self._resolve_pool.add(resolved_module, tag)
 
@@ -124,7 +128,9 @@ class PidModule(IProvider[T]):
 
         return dependencies
 
-    def _provide(self, dependencies: dict[str, Any]) -> T:
+    def _provide(self, tag: ResolveTag = None) -> T:
+        dependencies = self._prepare(tag)
+
         return self._class(**dependencies)
 
     def _make_own_providers_pool(self) -> ProvidersPool:

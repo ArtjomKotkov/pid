@@ -6,10 +6,6 @@ from ..bootstrap.const import METADATA_ATTRIBUTE
 from ..bootstrap.metadata import MetaData
 
 
-ProviderType = Provider | Type
-ProvidersType = list[ProviderType]
-
-
 T = TypeVar('T')
 
 
