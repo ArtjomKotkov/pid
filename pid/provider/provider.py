@@ -4,8 +4,7 @@ from typing import Type, TypeVar, Optional, Callable, Any, get_type_hints, get_o
 
 from ..bootstrap.utils import get_metadata
 from ..pools import Unknown, ProvidersPool, ResolvePool
-from ..shared import IProvider, CannotResolveDependency, Dependency
-
+from ..shared import IProvider, CannotResolveDependency, Dependency, ResolveTag
 
 T = TypeVar('T')
 
@@ -38,7 +37,7 @@ class Provider(IProvider[T]):
 
     def resolve(
         self,
-        tag: Optional[str] = None,
+        tag: ResolveTag = None,
     ) -> T:
         try:
             return self._resolve(tag)
@@ -48,7 +47,7 @@ class Provider(IProvider[T]):
 
     def _resolve(
         self,
-        tag: Optional[str] = None,
+        tag: ResolveTag = None,
     ) -> T:
         resolved_dependency = self._resolve_pool.get(tag)
         if resolved_dependency is not Unknown:
@@ -69,7 +68,7 @@ class Provider(IProvider[T]):
 
     def _prepare(
         self,
-        tag: Optional[str] = None,
+        tag: ResolveTag = None,
     ) -> dict[str, Any]:
         provider_dependencies = self.dependencies
 

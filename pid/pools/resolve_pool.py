@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from .pool_types import Unknown
 
@@ -17,5 +17,5 @@ class ResolvePool(Generic[T]):
     def add(self, resolved_dependency: Any, tag: ResolveTag = None) -> None:
         self._dependencies[tag] = resolved_dependency
 
-    def get(self, tag: Optional[str] = None) -> Any:
+    def get(self, tag: ResolveTag = None) -> Any:
         return self._dependencies.get(tag, Unknown)

@@ -4,7 +4,7 @@ from typing import Type, TypeVar, Optional, Any, get_type_hints, get_origin, get
 
 from ..bootstrap.utils import get_metadata
 from ..pools import Unknown, ProvidersPool, ResolvePool
-from ..shared import IProvider, IModule, Dependency, CannotResolveDependency, UndefinedExport, IMetaData
+from ..shared import IProvider, IModule, Dependency, CannotResolveDependency, UndefinedExport, IMetaData, ResolveTag
 
 
 T = TypeVar('T')
@@ -58,7 +58,7 @@ class PidModule(IProvider[T]):
 
     def resolve(
         self,
-        tag: Optional[str] = None,
+        tag: ResolveTag = None,
     ) -> T:
         try:
             return self._resolve(tag)
@@ -67,7 +67,7 @@ class PidModule(IProvider[T]):
 
     def _resolve(
         self,
-        tag: Optional[str] = None,
+        tag: ResolveTag = None,
     ) -> T:
         resolved_module = self._resolve_pool.get(tag)
 
@@ -95,7 +95,7 @@ class PidModule(IProvider[T]):
 
     def _prepare(
         self,
-        tag: Optional[str] = None,
+        tag: ResolveTag = None,
     ) -> dict[str, Any]:
         provider_dependencies = self.dependencies
 

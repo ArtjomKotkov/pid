@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TypeVar, Generic, Any, Callable, Optional, Type
+from typing import TypeVar, Generic, Any, Callable, Type, Optional
+
 
 T = TypeVar('T')
 
@@ -19,7 +20,6 @@ class IProvider(Generic[T]):
     name: str
 
     resolve: Callable[[Optional[str]], T]
-    resolve_child: Callable[[IProvider, Optional[str]], T]
     set_providers_pool: Callable
 
 
@@ -29,7 +29,7 @@ class IModule(Generic[T]):
     is_module: bool
     name: str
 
-    resolve: Callable
+    resolve: Callable[[Optional[str]], T]
     make_exports: Callable
     make_export_providers_pool: Callable
 
