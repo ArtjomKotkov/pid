@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import pytest
 
 from pid.shared import CannotResolveDependency, UndefinedExport, ClassIsNotInjectable
@@ -104,8 +106,8 @@ class TestsCombinations:
 
         @Pid.module(providers=[TestProvider, ProviderWithDep])
         class TestModule:
-            def __init__(self, provider: TestProvider):
-                __store__['module_provider'] = provider
+            def __init__(self, test_provider: TestProvider, _: ProviderWithDep):
+                __store__['module_provider'] = test_provider
 
         BootStrap.resolve(TestModule)
 
@@ -124,7 +126,7 @@ class TestsCombinations:
 
         @Pid.module(providers=[ProviderWithDep, TestProvider])
         class TestModule:
-            def __init__(self, provider: TestProvider):
+            def __init__(self, provider: TestProvider, _: ProviderWithDep):
                 __store__['module_provider'] = provider
 
         BootStrap.resolve(TestModule)
@@ -144,7 +146,7 @@ class TestsCombinations:
 
         @Pid.module(providers=[TestProvider, ReassignProvider])
         class TestModule:
-            def __init__(self, provider: TestProvider):
+            def __init__(self, provider: TestProvider, _: ReassignProvider):
                 __store__['module_provider'] = provider
 
         BootStrap.resolve(TestModule)
@@ -164,7 +166,7 @@ class TestsCombinations:
 
         @Pid.module(providers=[ReassignProvider, TestProvider])
         class TestModule:
-            def __init__(self, provider: TestProvider):
+            def __init__(self, provider: TestProvider, _: ReassignProvider):
                 __store__['module_provider'] = provider
 
         BootStrap.resolve(TestModule)
@@ -206,11 +208,13 @@ class TestsCombinations:
                 __store__['reassign_inherit_provider'] = provider
 
         @Pid.injectable(providers=[TestProvider, InheritProvider])
-        class ReassignProvider: ...
+        @dataclass
+        class ReassignProvider:
+            __: InheritProvider
 
         @Pid.module(providers=[ReassignProvider, TestProvider])
         class TestModule:
-            def __init__(self, provider: TestProvider):
+            def __init__(self, provider: TestProvider, _: ReassignProvider):
                 __store__['module_provider'] = provider
 
         BootStrap.resolve(TestModule)
@@ -229,11 +233,13 @@ class TestsCombinations:
                 __store__['reassign_inherit_provider'] = provider
 
         @Pid.injectable(providers=[InheritProvider, TestProvider])
-        class ReassignProvider: ...
+        @dataclass
+        class ReassignProvider:
+            __: InheritProvider
 
         @Pid.module(providers=[ReassignProvider, TestProvider])
         class TestModule:
-            def __init__(self, provider: TestProvider):
+            def __init__(self, provider: TestProvider, _: ReassignProvider):
                 __store__['module_provider'] = provider
 
         BootStrap.resolve(TestModule)
@@ -382,7 +388,7 @@ class TestsFactory:
 
         @Pid.module(providers=[FactoryDependency, TestProvider])
         class TestModule:
-            def __init__(self, provider: FactoryDependency):
+            def __init__(self, provider: FactoryDependency, _: TestProvider):
                 __store__['module_provider'] = provider
 
         BootStrap.resolve(TestModule)
@@ -453,7 +459,7 @@ class TestsFactory:
 
         @Pid.module(providers=[FactoryDependency, TestProvider])
         class TestModule:
-            def __init__(self, provider: FactoryDependency):
+            def __init__(self, provider: FactoryDependency, _: TestProvider):
                 __store__['module_provider'] = provider
 
         BootStrap.resolve(TestModule)
@@ -515,7 +521,7 @@ class TestsUnresolvedDependencies:
 
         @Pid.module(providers=[TestProvider, SecondProvider])
         class TestModule:
-            def __init__(self, provider: Provider[SecondProvider]):
+            def __init__(self, provider: Provider[SecondProvider], _: TestProvider):
                 assert isinstance(provider, Provider)
                 assert provider._class is SecondProvider
 

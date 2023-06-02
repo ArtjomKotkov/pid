@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 from ..shared import IMetaData
 
@@ -6,6 +6,7 @@ from ..shared import IMetaData
 __all__ = [
     'Dependency',
     'PidTag',
+    'ResolveTag',
 ]
 
 
@@ -15,3 +16,6 @@ class Dependency(NamedTuple):
 
 
 class PidTag(str): ...
+
+
+ResolveTag = Optional[PidTag]

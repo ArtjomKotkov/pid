@@ -1,3 +1,3 @@
-from .pool import DependencyPool
 from .provider_pool import ProvidersPool
 from .pool_types import Unknown
+from .resolve_pool import ResolvePool

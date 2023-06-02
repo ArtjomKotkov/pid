@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Type, TypeVar, Optional, Any, get_type_hints, get_origin, get_args
 
 from ..bootstrap.utils import get_metadata
-from ..pool import DependencyPool, Unknown, ProvidersPool
+from ..pools import Unknown, ProvidersPool, ResolvePool
 from ..shared import IProvider, IModule, Dependency, CannotResolveDependency, UndefinedExport, IMetaData
 
 
@@ -52,8 +52,7 @@ class PidModule(IProvider[T]):
             get_metadata(provider_).make_providable(self) for provider_ in providers
         ] if providers else []
 
-        self._pool = DependencyPool()
-
+        self._resolve_pool = ResolvePool()
         self._own_providers_pool = ProvidersPool()
         self._inherit_providers_pool = ProvidersPool()
 
@@ -61,11 +60,6 @@ class PidModule(IProvider[T]):
         self,
         tag: Optional[str] = None,
     ) -> T:
-        resolved_module = self._pool.get(self, tag)
-
-        if resolved_module is not Unknown:
-            return resolved_module
-
         try:
             return self._resolve(tag)
         except RecursionError:
@@ -75,6 +69,11 @@ class PidModule(IProvider[T]):
         self,
         tag: Optional[str] = None,
     ) -> T:
+        resolved_module = self._resolve_pool.get(tag)
+
+        if resolved_module is not Unknown:
+            return resolved_module
+
         for module in self._imports:
             module.resolve(tag)
             export_pool = module.make_export_providers_pool()
@@ -87,17 +86,17 @@ class PidModule(IProvider[T]):
         for provider in self._providers:
             provider.set_providers_pool(child_providers_pool)
 
-        for provider in self._providers:
-            self.resolve_child(provider, tag)
-
         dependencies = self._prepare(tag)
         resolved_module = self._provide(dependencies)
 
-        self._pool.add(self, resolved_module, tag)
+        self._resolve_pool.add(resolved_module, tag)
 
         return resolved_module
 
-    def _prepare(self, tag: str) -> dict[str, Any]:
+    def _prepare(
+        self,
+        tag: Optional[str] = None,
+    ) -> dict[str, Any]:
         provider_dependencies = self.dependencies
 
         dependencies = {}
@@ -105,20 +104,22 @@ class PidModule(IProvider[T]):
             metadata = dependency.metadata
 
             if not dependency.raw:
-                resolved_dependency = self._pool.get_by_meta_data(metadata, tag)
+                if self._own_providers_pool.has_by_metadata(metadata):
+                    related_provider = self._own_providers_pool.get_by_metadata(metadata)
 
-                if resolved_dependency is not Unknown:
-                    dependencies[key] = resolved_dependency
+                    dependencies[key] = related_provider.resolve(tag)
 
                 elif self._inherit_providers_pool.has_by_metadata(metadata):
                     related_provider = self._inherit_providers_pool.get_by_metadata(metadata)
 
-                    dependencies[key] = related_provider.owner.resolve_child(related_provider, tag)
+                    dependencies[key] = related_provider.resolve(tag)
                 else:
                     raise CannotResolveDependency(f'[{self.name}] {key}')
+
             else:
                 if self._own_providers_pool.has_by_metadata(metadata):
                     dependencies[key] = self._own_providers_pool.get_by_metadata(metadata)
+
                 elif self._inherit_providers_pool.has_by_metadata(metadata):
                     dependencies[key] = self._inherit_providers_pool.get_by_metadata(metadata)
                 else:
@@ -128,18 +129,6 @@ class PidModule(IProvider[T]):
 
     def _provide(self, dependencies: dict[str, Any]) -> T:
         return self._class(**dependencies)
-
-    def resolve_child(self, provider: IProvider, tag: Optional[str] = None) -> Any:
-        resolved_provider = self._pool.get(provider, tag)
-
-        if resolved_provider is not Unknown:
-            return resolved_provider
-
-        resolved_provider = provider.resolve(tag)
-
-        self._pool.add(provider, resolved_provider, tag)
-
-        return resolved_provider
 
     def _make_own_providers_pool(self) -> ProvidersPool:
         pool = ProvidersPool()
