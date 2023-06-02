@@ -60,10 +60,7 @@ class PidModule(IProvider[T]):
         self,
         tag: ResolveTag = None,
     ) -> T:
-        try:
-            return self._resolve(tag)
-        except RecursionError:
-            raise RecursionError('Recursion error means, that you are trying to resolve some dependencies manualy in class initializer. It\'s not allowed at the moment.\nPlease resolve your dependencies manually in class methods.')
+        return self._resolve(tag)
 
     def _resolve(
         self,
