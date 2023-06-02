@@ -4,7 +4,7 @@ from typing import Type, TypeVar, Optional, Callable, Any, get_type_hints, get_o
 
 from ..bootstrap.utils import get_metadata
 from ..pools import Unknown, ProvidersPool, ResolvePool
-from ..shared import IProvider, CannotResolveDependency, Dependency, ResolveTag
+from ..shared import IProvider, CannotResolveDependency, Dependency, ResolveTag, PidTag
 
 T = TypeVar('T')
 
@@ -39,6 +39,9 @@ class Provider(IProvider[T]):
         self,
         tag: ResolveTag = None,
     ) -> T:
+        if self._class == PidTag:
+            return tag
+
         return self._resolve(tag)
 
     def _resolve(
