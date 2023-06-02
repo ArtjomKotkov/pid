@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Type, TypeVar, Optional, Any, get_type_hints, get_origin, get_args
 
 from ..bootstrap.utils import get_metadata
-from ..dependency_pool import DependencyPool, Unknown, ProvidersPool
+from ..pool import DependencyPool, Unknown, ProvidersPool
 from ..shared import IProvider, IModule, Dependency, CannotResolveDependency, UndefinedExport, IMetaData
 
 
