@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from ..bootstrap.i_metadata import IMetaData
-from ..shared import IProvider, merge_deep
+from ..shared import IProvider, merge_deep, IMetaData
 
 
 class ProvidersPool:
@@ -11,16 +10,16 @@ class ProvidersPool:
     def add(self, provider: IProvider) -> None:
         self._providers[provider.name] = provider
 
-    def get(self, provider: IProvider) -> any:
+    def get(self, provider: IProvider) -> Any:
         return self._providers.get(provider.name)
 
     def get_all(self) -> dict[str, IProvider]:
         return self._providers
 
-    def get_by_metadata(self, metadata: IMetaData) -> any:
+    def get_by_metadata(self, metadata: IMetaData) -> Any:
         return self._providers.get(metadata.name)
 
-    def set(self, dependencies: dict[str, any]) -> None:
+    def set(self, dependencies: dict[str, Any]) -> None:
         self._providers.clear()
         self._providers.update(dependencies)
 
@@ -52,5 +51,5 @@ class ProvidersPool:
         return new_pool
 
     @property
-    def providers(self) -> dict[str, any]:
+    def providers(self) -> dict[str, Any]:
         return self._providers

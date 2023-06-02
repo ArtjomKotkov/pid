@@ -1,7 +1,7 @@
 import pytest
 
 from pid.shared import CannotResolveDependency, UndefinedExport, ClassIsNotInjectable
-from pid import BootStrap, Pid
+from pid import BootStrap, Pid, Provider, Tag
 
 
 class TestsCombinations:
@@ -15,7 +15,7 @@ class TestsCombinations:
             def __init__(self, provider: TestProvider):
                 self.provider = provider
 
-        test_module = BootStrap.resolve(TestModule, mode='test')
+        test_module = BootStrap.resolve(TestModule)
 
         assert test_module.provider is not None
 
@@ -35,7 +35,7 @@ class TestsCombinations:
             def __init__(self, provider: TestProvider):
                 __store__['inherited_provider'] = provider
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['common_provider'] is __store__['inherited_provider']
 
@@ -58,7 +58,7 @@ class TestsCombinations:
             def __init__(self, provider: TestProvider):
                 __store__['inherited_provider'] = provider
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['common_provider'] is __store__['inherited_provider']
 
@@ -86,7 +86,7 @@ class TestsCombinations:
         @Pid.module(imports=[RightModule, LeftModule])
         class TestModule: ...
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['common_provider'] is __store__['left_provider']
         assert __store__['common_provider'] is __store__['right_provider']
@@ -107,7 +107,7 @@ class TestsCombinations:
             def __init__(self, provider: TestProvider):
                 __store__['module_provider'] = provider
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['provider_provider'] is __store__['module_provider']
 
@@ -127,7 +127,7 @@ class TestsCombinations:
             def __init__(self, provider: TestProvider):
                 __store__['module_provider'] = provider
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['provider_provider'] is __store__['module_provider']
 
@@ -147,7 +147,7 @@ class TestsCombinations:
             def __init__(self, provider: TestProvider):
                 __store__['module_provider'] = provider
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['reassign_provider'] is not __store__['module_provider']
 
@@ -167,7 +167,7 @@ class TestsCombinations:
             def __init__(self, provider: TestProvider):
                 __store__['module_provider'] = provider
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['reassign_provider'] is not __store__['module_provider']
 
@@ -190,7 +190,7 @@ class TestsCombinations:
             def __init__(self, provider: TestProvider):
                 __store__['inherited_provider'] = provider
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['common_provider'] is not __store__['inherited_provider']
 
@@ -213,7 +213,7 @@ class TestsCombinations:
             def __init__(self, provider: TestProvider):
                 __store__['module_provider'] = provider
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['reassign_inherit_provider'] is not __store__['module_provider']
 
@@ -236,7 +236,7 @@ class TestsCombinations:
             def __init__(self, provider: TestProvider):
                 __store__['module_provider'] = provider
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['reassign_inherit_provider'] is not __store__['module_provider']
 
@@ -261,7 +261,7 @@ class TestsCombinations:
             def __init__(self, provider: TestProvider):
                 __store__['inherited_provider'] = provider
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['inherited_provider'] is __store__['export_provider_two']
         assert __store__['inherited_provider'] is not __store__['export_provider_one']
@@ -288,7 +288,7 @@ class TestsCombinations:
             def __init__(self, provider: TestProvider):
                 __store__['inherited_provider'] = provider
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['inherited_provider'] is not __store__['export_provider_two']
         assert __store__['inherited_provider'] is __store__['export_provider_one']
@@ -304,7 +304,7 @@ class TestsErrors:
         class TestModule: ...
 
         with pytest.raises(ClassIsNotInjectable):
-            BootStrap.resolve(TestModule, mode='test')
+            BootStrap.resolve(TestModule)
 
     def test_not_injectable_module(self):
         class SecondModule: ...
@@ -313,7 +313,7 @@ class TestsErrors:
         class TestModule: ...
 
         with pytest.raises(ClassIsNotInjectable):
-            BootStrap.resolve(TestModule, mode='test')
+            BootStrap.resolve(TestModule)
 
     def test_forbidden_exports(self):
         @Pid.injectable()
@@ -327,7 +327,7 @@ class TestsErrors:
             def __init__(self, _: TestProvider): ...
 
         with pytest.raises(CannotResolveDependency):
-            BootStrap.resolve(TestModule, mode='test')
+            BootStrap.resolve(TestModule)
 
     def test_export_undefined(self):
         @Pid.injectable()
@@ -344,7 +344,7 @@ class TestsErrors:
             def __init__(self, _: TestProvider): ...
 
         with pytest.raises(UndefinedExport):
-            BootStrap.resolve(TestModule, mode='test')
+            BootStrap.resolve(TestModule)
 
 
 class TestsFactory:
@@ -360,7 +360,7 @@ class TestsFactory:
             def __init__(self, provider: TestProvider):
                 self.provider = provider
 
-        test_module = BootStrap.resolve(TestModule, mode='test')
+        test_module = BootStrap.resolve(TestModule)
 
         assert isinstance(test_module.provider, str)
         assert test_module.provider == 'test_string'
@@ -385,7 +385,7 @@ class TestsFactory:
             def __init__(self, provider: FactoryDependency):
                 __store__['module_provider'] = provider
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['module_provider'] is __store__['factory_provider']
 
@@ -407,7 +407,7 @@ class TestsFactory:
             def __init__(self, provider: TestProvider):
                 self.provider = provider
 
-        test_module = BootStrap.resolve(TestModule, mode='test')
+        test_module = BootStrap.resolve(TestModule)
 
         assert isinstance(test_module.provider, str)
         assert test_module.provider == 'test_string'
@@ -430,7 +430,7 @@ class TestsFactory:
             def __init__(self, provider: TestProvider):
                 self.provider = provider
 
-        test_module = BootStrap.resolve(TestModule, mode='test')
+        test_module = BootStrap.resolve(TestModule)
 
         assert isinstance(test_module.provider, str)
         assert test_module.provider == 'test_string'
@@ -456,7 +456,7 @@ class TestsFactory:
             def __init__(self, provider: FactoryDependency):
                 __store__['module_provider'] = provider
 
-        BootStrap.resolve(TestModule, mode='test')
+        BootStrap.resolve(TestModule)
 
         assert __store__['module_provider'] is not  __store__['factory_provider']
 
@@ -482,5 +482,148 @@ class TestsFactoryErrors:
                 self.provider = provider
 
         with pytest.raises(CannotResolveDependency):
-            BootStrap.resolve(TestModule, mode='test')
+            BootStrap.resolve(TestModule)
 
+
+class TestsUnresolvedDependencies:
+
+    def test_unresolved_dependency(self):
+        @Pid.injectable()
+        class TestProvider: ...
+
+        @Pid.module(providers=[TestProvider])
+        class TestModule:
+            def __init__(self, provider: Provider[TestProvider]):
+                assert isinstance(provider, Provider)
+                assert provider._class is TestProvider
+
+        BootStrap.resolve(TestModule)
+
+    def test_unresolved_dependency_inherit(self):
+        __store__ = {}
+
+        @Pid.injectable()
+        class SecondProvider: ...
+
+        @Pid.injectable()
+        class TestProvider:
+            def __init__(self, provider: Provider[SecondProvider]):
+                assert isinstance(provider, Provider)
+                assert provider._class is SecondProvider
+
+                __store__['provider_provider'] = provider
+
+        @Pid.module(providers=[TestProvider, SecondProvider])
+        class TestModule:
+            def __init__(self, provider: Provider[SecondProvider]):
+                assert isinstance(provider, Provider)
+                assert provider._class is SecondProvider
+
+                __store__['module_provider'] = provider
+
+        BootStrap.resolve(TestModule)
+
+        assert __store__['provider_provider'] is __store__['module_provider']
+
+    def test_unresolved_dependency_resolve(self):
+        @Pid.injectable()
+        class TestProvider: ...
+
+        @Pid.module(providers=[TestProvider])
+        class TestModule:
+            def __init__(self, provider: Provider[TestProvider]):
+                resolved_provider = provider.resolve()
+
+                assert not isinstance(resolved_provider, Provider)
+                assert isinstance(resolved_provider, TestProvider)
+
+        BootStrap.resolve(TestModule)
+
+    def test_unresolved_dependency_resolve_self(self):
+        @Pid.injectable()
+        class TestProvider: ...
+
+        @Pid.module(providers=[TestProvider])
+        class TestModule:
+            def __init__(self, provider: Provider[TestProvider]):
+                resolved_provider = provider.resolve()
+
+                assert not isinstance(resolved_provider, Provider)
+                assert isinstance(resolved_provider, TestProvider)
+
+        BootStrap.resolve(TestModule)
+
+    def test_unresolved_dependency_resolve_with_tag(self):
+        @Pid.injectable()
+        class TestProvider: ...
+
+        @Pid.module(providers=[TestProvider])
+        class TestModule:
+            def __init__(self, unresolved_provider: Provider[TestProvider], provider: TestProvider):
+                resolved_provider = unresolved_provider.resolve('some_tag')
+
+                assert resolved_provider is not provider
+                assert isinstance(resolved_provider, TestProvider)
+
+        BootStrap.resolve(TestModule)
+
+    def test_unresolved_dependency_resolve_without_same_tag(self):
+        @Pid.injectable()
+        class TestProvider: ...
+
+        @Pid.module(providers=[TestProvider])
+        class TestModule:
+            def __init__(self, unresolved_provider: Provider[TestProvider], provider: TestProvider):
+                resolved_provider = unresolved_provider.resolve('some_tag')
+
+                assert resolved_provider is not provider
+                assert isinstance(resolved_provider, TestProvider)
+
+        BootStrap.resolve(TestModule)
+
+    def test_unresolved_dependency_provide_tag(self):
+        __tag__ = 'some_tag'
+
+        @Pid.injectable()
+        class TestProvider: ...
+
+        @Pid.module(providers=[TestProvider])
+        class TestModule:
+            def __init__(self, tag: Tag):
+                assert tag == __tag__
+
+        BootStrap.resolve(TestModule, tag=__tag__)
+
+    def test_unresolved_dependency_child_provide_tag(self):
+        __store__ = []
+        __tag__ = 'some_tag'
+
+        @Pid.injectable()
+        class TestProvider:
+            def __init__(self, tag: Tag):
+                __store__.append(tag)
+
+        @Pid.module(providers=[TestProvider])
+        class TestModule:
+            def __init__(self, unresolved_provider: Provider[TestProvider], _: TestProvider):
+                unresolved_provider.resolve(__tag__)
+
+        BootStrap.resolve(TestModule)
+
+        first_tag, second_tag = __store__
+
+        assert first_tag is None
+        assert second_tag == __tag__
+
+    def test_tag_implicit(self):
+        __tag__ = 'some_tag'
+
+        @Pid.injectable()
+        class TestProvider: ...
+
+        @Pid.module(providers=[TestProvider, Tag])
+        class TestModule:
+            def __init__(self, tag: Tag):
+                assert __tag__ == tag
+
+        BootStrap.resolve(TestModule, __tag__)

@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from typing import Type, TypeVar, Optional, Any, get_type_hints
+from typing import Type, TypeVar, Optional, Any, get_type_hints, get_origin, get_args
 
-from ..bootstrap.i_metadata import IMetaData
 from ..bootstrap.utils import get_metadata
 from ..dependency_pool import DependencyPool, Unknown, ProvidersPool
-from ..shared import IProvider, IModule
-from ..shared.exceptions import CannotResolveDependency, UndefinedExport
+from ..shared import IProvider, IModule, Dependency, CannotResolveDependency, UndefinedExport, IMetaData
 
 
 T = TypeVar('T')
@@ -103,18 +101,28 @@ class PidModule(IProvider[T]):
         provider_dependencies = self.dependencies
 
         dependencies = {}
-        for key, metadata in provider_dependencies.items():
-            resolved_dependency = self._pool.get_by_meta_data(metadata, tag)
+        for key, dependency in provider_dependencies.items():
+            metadata = dependency.metadata
 
-            if resolved_dependency is not Unknown:
-                dependencies[key] = resolved_dependency
+            if not dependency.raw:
+                resolved_dependency = self._pool.get_by_meta_data(metadata, tag)
 
-            elif self._inherit_providers_pool.has_by_metadata(metadata):
-                related_provider = self._inherit_providers_pool.get_by_metadata(metadata)
+                if resolved_dependency is not Unknown:
+                    dependencies[key] = resolved_dependency
 
-                dependencies[key] = related_provider.owner.resolve_child(related_provider, tag)
+                elif self._inherit_providers_pool.has_by_metadata(metadata):
+                    related_provider = self._inherit_providers_pool.get_by_metadata(metadata)
+
+                    dependencies[key] = related_provider.owner.resolve_child(related_provider, tag)
+                else:
+                    raise CannotResolveDependency(f'[{self.name}] {key}')
             else:
-                raise CannotResolveDependency(f'[{self.name}] {key}')
+                if self._own_providers_pool.has_by_metadata(metadata):
+                    dependencies[key] = self._own_providers_pool.get_by_metadata(metadata)
+                elif self._inherit_providers_pool.has_by_metadata(metadata):
+                    dependencies[key] = self._inherit_providers_pool.get_by_metadata(metadata)
+                else:
+                    raise CannotResolveDependency(f'[{self.name}] {key}')
 
         return dependencies
 
@@ -175,7 +183,7 @@ class PidModule(IProvider[T]):
         return self._class.__name__
 
     @property
-    def dependencies(self) -> dict[str, IMetaData]:
+    def dependencies(self) -> dict[str, Dependency]:
         method = self._class.__init__
 
         try:
@@ -187,7 +195,18 @@ class PidModule(IProvider[T]):
             del init_annotations['return']
 
         return {
-            key: get_metadata(class_)
-            for key, class_
+            key: Dependency(
+                metadata=get_metadata(annotation),
+                raw=False,
+            )
+
+            if not get_origin(annotation) else
+
+            Dependency(
+                metadata=get_metadata(get_args(annotation)[0]),
+                raw=True,
+            )
+
+            for key, annotation
             in init_annotations.items()
         }

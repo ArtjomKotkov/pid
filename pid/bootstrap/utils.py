@@ -1,9 +1,8 @@
 from typing import Type, TypeVar
 
 from .const import METADATA_ATTRIBUTE
-from .i_metadata import IMetaData
 
-from ..shared import ClassIsNotInjectable
+from ..shared import ClassIsNotInjectable, IMetaData
 
 
 T = TypeVar('T')
