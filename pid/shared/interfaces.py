@@ -22,14 +22,11 @@ class IProvider(Generic[T]):
     resolve: Callable[[Optional[str]], T]
     set_providers_pool: Callable
 
+    provider_method: Callable[[*Any], T]
+    factory: Callable[[*Any], T]
 
-class IModule(Generic[T]):
-    _class: Any
 
-    is_module: bool
-    name: str
-
-    resolve: Callable[[Optional[str]], T]
+class IModule(IProvider[T]):
     make_exports: Callable
     make_export_providers_pool: Callable
 

@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from typing import Type, TypeVar, Optional, Callable, Any, get_type_hints, get_origin, get_args
+from typing import Type, TypeVar, Optional, Callable, Any
 
 from ..bootstrap.utils import get_metadata
 from ..pools import Unknown, ProvidersPool, ResolvePool
-from ..shared import IProvider, CannotResolveDependency, Dependency, ResolveTag, PidTag
+from ..shared import IProvider, ResolveTag, PidTag
+from ..abstract import AbstractProvider
+
 
 T = TypeVar('T')
 
 
-class Provider(IProvider[T]):
+class Provider(AbstractProvider[T]):
     is_module = False
 
     def __init__(
@@ -42,7 +44,7 @@ class Provider(IProvider[T]):
         if self._class == PidTag:
             return tag
 
-        return self._resolve(tag)
+        return super().resolve(tag)
 
     def _resolve(
         self,
@@ -64,48 +66,6 @@ class Provider(IProvider[T]):
 
         return resolved_provider
 
-    def _prepare(
-        self,
-        tag: ResolveTag = None,
-    ) -> dict[str, Any]:
-        provider_dependencies = self.dependencies
-
-        dependencies = {}
-        for key, dependency in provider_dependencies.items():
-            metadata = dependency.metadata
-
-            if not dependency.raw:
-                if self._own_providers_pool.has_by_metadata(metadata):
-                    related_provider = self._own_providers_pool.get_by_metadata(metadata)
-
-                    dependencies[key] = related_provider.resolve(tag)
-
-                elif self._inherit_providers_pool.has_by_metadata(metadata):
-                    related_provider = self._inherit_providers_pool.get_by_metadata(metadata)
-
-                    dependencies[key] = related_provider.resolve(tag)
-                else:
-                    raise CannotResolveDependency(f'[{self.name}] {key}')
-
-            else:
-                if self._own_providers_pool.has_by_metadata(metadata):
-                    dependencies[key] = self._own_providers_pool.get_by_metadata(metadata)
-
-                elif self._inherit_providers_pool.has_by_metadata(metadata):
-                    dependencies[key] = self._inherit_providers_pool.get_by_metadata(metadata)
-                else:
-                    raise CannotResolveDependency(f'[{self.name}] {key}')
-
-        return dependencies
-
-    def _provide(self, tag: ResolveTag = None) -> T:
-        dependencies = self._prepare(tag)
-
-        if self._factory is None:
-            return self._class(**dependencies)
-        else:
-            return self._factory(**dependencies)
-
     def _make_own_providers_pool(self) -> ProvidersPool:
         pool = ProvidersPool()
 
@@ -118,34 +78,5 @@ class Provider(IProvider[T]):
         return self._inherit_providers_pool.copy().merge(self._own_providers_pool)
 
     @property
-    def name(self) -> str:
-        return self._class.__name__
-
-    @property
-    def dependencies(self) -> dict[str, Dependency]:
-        method = self._class.__init__ if self._factory is None else self._factory
-
-        try:
-            init_annotations = get_type_hints(method)
-        except AttributeError:
-            return {}
-
-        if 'return' in init_annotations:
-            del init_annotations['return']
-
-        return {
-            key: Dependency(
-                metadata=get_metadata(annotation),
-                raw=False,
-            )
-
-            if not get_origin(annotation) else
-
-            Dependency(
-                metadata=get_metadata(get_args(annotation)[0]),
-                raw=True,
-            )
-
-            for key, annotation
-            in init_annotations.items()
-        }
+    def provider_method(self) -> Callable[[*Any], T]:
+        return self._class.__init__ if self._factory is None else self._factory

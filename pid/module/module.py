@@ -1,21 +1,21 @@
 from __future__ import annotations
 
-from typing import Type, TypeVar, Optional, Any, get_type_hints, get_origin, get_args
+from typing import Type, TypeVar, Optional, Any, Callable
 
 from ..bootstrap.utils import get_metadata
 from ..pools import Unknown, ProvidersPool, ResolvePool
 from ..shared import (
     IProvider, IModule,
-    Dependency, CannotResolveDependency,
     UndefinedExport, IMetaData,
     ResolveTag,
 )
+from ..abstract import AbstractProvider
 
 
 T = TypeVar('T')
 
 
-class PidModule(IProvider[T]):
+class PidModule(AbstractProvider[T]):
     is_module = True
 
     __instances__ = {}
@@ -78,7 +78,7 @@ class PidModule(IProvider[T]):
 
         for module in self._imports:
             module.resolve(tag)
-            export_pool = module.make_export_providers_pool()
+            export_pool = ProvidersPool.from_providers(module.make_exports())
 
             self._inherit_providers_pool.merge(export_pool)
 
@@ -93,59 +93,6 @@ class PidModule(IProvider[T]):
         self._resolve_pool.add(resolved_module, tag)
 
         return resolved_module
-
-    def _prepare(
-        self,
-        tag: ResolveTag = None,
-    ) -> dict[str, Any]:
-        provider_dependencies = self.dependencies
-
-        dependencies = {}
-        for key, dependency in provider_dependencies.items():
-            metadata = dependency.metadata
-
-            if not dependency.raw:
-                if self._own_providers_pool.has_by_metadata(metadata):
-                    related_provider = self._own_providers_pool.get_by_metadata(metadata)
-
-                    dependencies[key] = related_provider.resolve(tag)
-
-                elif self._inherit_providers_pool.has_by_metadata(metadata):
-                    related_provider = self._inherit_providers_pool.get_by_metadata(metadata)
-
-                    dependencies[key] = related_provider.resolve(tag)
-                else:
-                    raise CannotResolveDependency(f'[{self.name}] {key}')
-
-            else:
-                if self._own_providers_pool.has_by_metadata(metadata):
-                    dependencies[key] = self._own_providers_pool.get_by_metadata(metadata)
-
-                elif self._inherit_providers_pool.has_by_metadata(metadata):
-                    dependencies[key] = self._inherit_providers_pool.get_by_metadata(metadata)
-                else:
-                    raise CannotResolveDependency(f'[{self.name}] {key}')
-
-        return dependencies
-
-    def _provide(self, tag: ResolveTag = None) -> T:
-        dependencies = self._prepare(tag)
-
-        return self._class(**dependencies)
-
-    def _make_own_providers_pool(self) -> ProvidersPool:
-        pool = ProvidersPool()
-
-        for provider in self._providers:
-            pool.add(provider)
-
-        return pool
-
-    def _make_child_providers_pool(self) -> ProvidersPool:
-        return self._inherit_providers_pool.copy().merge(self._own_providers_pool)
-
-    def make_export_providers_pool(self) -> ProvidersPool:
-        return ProvidersPool.from_providers(self.make_exports())
 
     def make_exports(self) -> list[IProvider]:
         available_providers_for_export = self._make_child_providers_pool().get_all()
@@ -170,35 +117,17 @@ class PidModule(IProvider[T]):
 
         return [provider for name, provider in available_providers_for_export.items() if name in providers_names_to_export]
 
-    @property
-    def name(self) -> str:
-        return self._class.__name__
+    def _make_own_providers_pool(self) -> ProvidersPool:
+        pool = ProvidersPool()
+
+        for provider in self._providers:
+            pool.add(provider)
+
+        return pool
+
+    def _make_child_providers_pool(self) -> ProvidersPool:
+        return self._inherit_providers_pool.copy().merge(self._own_providers_pool)
 
     @property
-    def dependencies(self) -> dict[str, Dependency]:
-        method = self._class.__init__
-
-        try:
-            init_annotations = get_type_hints(method)
-        except AttributeError:
-            return {}
-
-        if 'return' in init_annotations:
-            del init_annotations['return']
-
-        return {
-            key: Dependency(
-                metadata=get_metadata(annotation),
-                raw=False,
-            )
-
-            if not get_origin(annotation) else
-
-            Dependency(
-                metadata=get_metadata(get_args(annotation)[0]),
-                raw=True,
-            )
-
-            for key, annotation
-            in init_annotations.items()
-        }
+    def provider_method(self) -> Callable[[*Any], T]:
+        return self._class.__init__
