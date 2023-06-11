@@ -14,7 +14,7 @@ __all__ = [
 
 
 class IProvider(Generic[T]):
-    _class: Any
+    class_: Any
 
     is_module: bool
     name: str

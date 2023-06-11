@@ -1,47 +1,47 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Type, Optional
 
-from ..shared import IProvider, merge_deep, IMetaData
+from ..shared import IProvider, merge_deep, MultipleProvidersForAlias
 
 
 class ProvidersPool:
     def __init__(self):
-        self._providers = dict()
+        self._providers: dict[tuple[type, Any], IProvider] = {}
 
     def add(self, provider: IProvider) -> None:
-        self._providers[provider.name] = provider
+        aliases = self._get_class_aliases(provider.class_)
 
-    def get(self, provider: IProvider) -> Any:
-        return self._providers.get(provider.name)
+        self._providers[aliases] = provider
 
-    def get_all(self) -> dict[str, IProvider]:
+    def get(self, class_: Type[Any]) -> Any:
+        result: Optional[IProvider] = None
+
+        for aliases_record, provider in self._providers.items():
+            aliases_record_set = set(aliases_record)
+
+            if {class_}.intersection(aliases_record_set):
+                if result is None:
+                    result = provider
+                else:
+                    raise MultipleProvidersForAlias()
+
+        return result
+
+    def get_all(self) -> dict[tuple[type, Any], IProvider]:
         return self._providers
 
-    def get_by_metadata(self, metadata: IMetaData) -> Any:
-        return self._providers.get(metadata.name)
-
-    def set(self, dependencies: dict[str, Any]) -> None:
-        self._providers.clear()
-        self._providers.update(dependencies)
-
-    def has_strict(self, provider: IProvider) -> bool:
-        return provider is self._providers.get(provider.name)
-
-    def has(self, provider: IProvider) -> bool:
-        return bool(self._providers.get(provider.name))
-
-    def has_by_metadata(self, metadata: IMetaData) -> bool:
-        return bool(self._providers.get(metadata.name))
+    def has(self, class_: Type[Any]) -> bool:
+        return bool(self.get(class_))
 
     def merge(self, pool: ProvidersPool) -> ProvidersPool:
-        self.set(merge_deep(self.providers, pool.providers))
+        self._set(merge_deep(self._providers, pool._providers))
 
         return self
 
     def copy(self) -> ProvidersPool:
         new_pool = ProvidersPool()
-        new_pool.set(self._providers)
+        new_pool._set(self._providers)
 
         return new_pool
 
@@ -52,6 +52,10 @@ class ProvidersPool:
             new_pool.add(provider)
         return new_pool
 
-    @property
-    def providers(self) -> dict[str, Any]:
-        return self._providers
+    @staticmethod
+    def _get_class_aliases(class_: Type[Any]) -> tuple[type, Any]:
+        return (class_, *(class_.__orig_bases__ if hasattr(class_, '__orig_bases__') else class_.__bases__))
+
+    def _set(self, dependencies: dict[tuple[type, Any], IProvider]) -> None:
+        self._providers.clear()
+        self._providers.update(dependencies)

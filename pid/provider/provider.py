@@ -22,7 +22,7 @@ class Provider(AbstractProvider[T]):
     ):
         super().__init__()
 
-        self._class = class_
+        self.class_ = class_
 
         self._providers: list[IProvider] = [
             get_metadata(provider_).make_providable() for provider_ in providers
@@ -41,7 +41,7 @@ class Provider(AbstractProvider[T]):
         self,
         tag: ResolveTag = None,
     ) -> T:
-        if self._class == PidTag:
+        if self.class_ == PidTag:
             return tag
 
         return super().resolve(tag)
@@ -79,4 +79,4 @@ class Provider(AbstractProvider[T]):
 
     @property
     def provider_method(self) -> Callable[[*Any], T]:
-        return self._class.__init__ if self._factory is None else self._factory
+        return self.class_.__init__ if self._factory is None else self._factory

@@ -1,7 +1,8 @@
 __all__ = [
     'CannotResolveDependency',
     'UndefinedExport',
-    'ClassIsNotInjectable'
+    'ClassIsNotInjectable',
+    'MultipleProvidersForAlias',
 ]
 
 
@@ -12,3 +13,6 @@ class UndefinedExport(Exception): ...
 
 
 class ClassIsNotInjectable(Exception): ...
+
+
+class MultipleProvidersForAlias(Exception): ...

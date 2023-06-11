@@ -1,7 +1,7 @@
-from typing import Any
+from typing import Any, Hashable
 
 
-DictOfDicts = dict[str, dict[str, Any]]
+DictOfDicts = dict[Hashable, dict[str, Any] | Any]
 
 
 __all__ = [

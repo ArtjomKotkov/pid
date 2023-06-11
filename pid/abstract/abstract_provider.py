@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TypeVar, Any, get_type_hints, get_origin, get_args, Callable, Optional
 
-from ..bootstrap.utils import get_metadata
 from ..pools import ProvidersPool
 from ..shared import IProvider, Dependency, CannotResolveDependency, ResolveTag
 
@@ -32,27 +31,25 @@ class AbstractProvider(IProvider[T]):
 
         dependencies = {}
         for key, dependency in provider_dependencies.items():
-            metadata = dependency.metadata
-
             if not dependency.raw:
-                if self._own_providers_pool.has_by_metadata(metadata):
-                    related_provider = self._own_providers_pool.get_by_metadata(metadata)
+                if self._own_providers_pool.has(dependency.marker):
+                    related_provider = self._own_providers_pool.get(dependency.marker)
 
                     dependencies[key] = related_provider.resolve(tag)
 
-                elif self._inherit_providers_pool.has_by_metadata(metadata):
-                    related_provider = self._inherit_providers_pool.get_by_metadata(metadata)
+                elif self._inherit_providers_pool.has(dependency.marker):
+                    related_provider = self._inherit_providers_pool.get(dependency.marker)
 
                     dependencies[key] = related_provider.resolve(tag)
                 else:
                     raise CannotResolveDependency(f'[{self.name}] {key}')
 
             else:
-                if self._own_providers_pool.has_by_metadata(metadata):
-                    dependencies[key] = self._own_providers_pool.get_by_metadata(metadata)
+                if self._own_providers_pool.has(dependency.marker):
+                    dependencies[key] = self._own_providers_pool.get(dependency.marker)
 
-                elif self._inherit_providers_pool.has_by_metadata(metadata):
-                    dependencies[key] = self._inherit_providers_pool.get_by_metadata(metadata)
+                elif self._inherit_providers_pool.has(dependency.marker):
+                    dependencies[key] = self._inherit_providers_pool.get(dependency.marker)
                 else:
                     raise CannotResolveDependency(f'[{self.name}] {key}')
 
@@ -66,15 +63,15 @@ class AbstractProvider(IProvider[T]):
     @property
     def factory(self) -> Callable[[*Any], T]:
         if self.is_module:
-            return self._class
+            return self.class_
         elif self._factory is None:
-            return self._class
+            return self.class_
         else:
             return self._factory
 
     @property
     def name(self) -> str:
-        return self._class.__name__
+        return self.class_.__name__
 
     @property
     def dependencies(self) -> dict[str, Dependency]:
@@ -86,19 +83,21 @@ class AbstractProvider(IProvider[T]):
         if 'return' in init_annotations:
             del init_annotations['return']
 
-        return {
-            key: Dependency(
-                metadata=get_metadata(annotation),
-                raw=False,
+        result = {}
+
+        for key, annotation in init_annotations.items():
+            origin = get_origin(annotation)
+
+            if origin and issubclass(origin, AbstractProvider):
+                result[key] = Dependency(
+                    marker=get_args(annotation)[0],
+                    raw=True,
+                )
+                continue
+
+            result[key] = Dependency(
+                marker=annotation,
+                raw=False
             )
 
-            if not get_origin(annotation) else
-
-            Dependency(
-                metadata=get_metadata(get_args(annotation)[0]),
-                raw=True,
-            )
-
-            for key, annotation
-            in init_annotations.items()
-        }
+        return result

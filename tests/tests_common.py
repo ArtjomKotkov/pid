@@ -501,7 +501,7 @@ class TestsUnresolvedDependencies:
         class TestModule:
             def __init__(self, provider: Provider[TestProvider]):
                 assert isinstance(provider, Provider)
-                assert provider._class is TestProvider
+                assert provider.class_ is TestProvider
 
         BootStrap.resolve(TestModule)
 
@@ -515,7 +515,7 @@ class TestsUnresolvedDependencies:
         class TestProvider:
             def __init__(self, provider: Provider[SecondProvider]):
                 assert isinstance(provider, Provider)
-                assert provider._class is SecondProvider
+                assert provider.class_ is SecondProvider
 
                 __store__['provider_provider'] = provider
 
@@ -523,7 +523,7 @@ class TestsUnresolvedDependencies:
         class TestModule:
             def __init__(self, provider: Provider[SecondProvider], _: TestProvider):
                 assert isinstance(provider, Provider)
-                assert provider._class is SecondProvider
+                assert provider.class_ is SecondProvider
 
                 __store__['module_provider'] = provider
 

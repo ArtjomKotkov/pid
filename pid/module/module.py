@@ -43,7 +43,7 @@ class PidModule(AbstractProvider[T]):
         exports: Optional[list[Any]] = None,
         providers: Optional[list[Any]] = None,
     ) -> None:
-        self._class = class_
+        self.class_ = class_
 
         self._imports: list[IModule] = [
             get_metadata(import_).make_providable() for import_ in imports
@@ -95,27 +95,27 @@ class PidModule(AbstractProvider[T]):
         return resolved_module
 
     def make_exports(self) -> list[IProvider]:
-        available_providers_for_export = self._make_child_providers_pool().get_all()
+        child_providers_pool = self._make_child_providers_pool()
 
-        providers_names_to_export = []
+        export_units_metadata_for_export = []
 
-        for export_unit in self._exports:
-            if export_unit.is_module:
-                export_module = next(module for module in self._imports if module.name == export_unit.name)
-                providers_names_to_export.extend([provider.name for provider in export_module.make_exports()])
+        for export_unit_metadata in self._exports:
+            if export_unit_metadata.is_module:
+                export_module = next(module for module in self._imports if module.class_ is export_unit_metadata.class_)
+                export_units_metadata_for_export.extend([provider for provider in export_module.make_exports()])
             else:
-                providers_names_to_export.append(export_unit.name)
+                export_units_metadata_for_export.append(export_unit_metadata)
 
         undefined_exports = [
-            name
-            for name in providers_names_to_export
-            if name not in available_providers_for_export
+            metadata
+            for metadata in export_units_metadata_for_export
+            if not child_providers_pool.has(metadata.class_)
         ]
 
         if undefined_exports:
             raise UndefinedExport()
 
-        return [provider for name, provider in available_providers_for_export.items() if name in providers_names_to_export]
+        return [child_providers_pool.get(metadata.class_) for metadata in export_units_metadata_for_export]
 
     def _make_own_providers_pool(self) -> ProvidersPool:
         pool = ProvidersPool()
@@ -130,4 +130,4 @@ class PidModule(AbstractProvider[T]):
 
     @property
     def provider_method(self) -> Callable[[*Any], T]:
-        return self._class.__init__
+        return self.class_.__init__

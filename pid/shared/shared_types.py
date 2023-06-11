@@ -1,6 +1,4 @@
-from typing import NamedTuple, Optional
-
-from ..shared import IMetaData
+from typing import NamedTuple, Optional, Type, Any
 
 
 __all__ = [
@@ -11,8 +9,8 @@ __all__ = [
 
 
 class Dependency(NamedTuple):
-    metadata: IMetaData
     raw: bool
+    marker: Type[Any]
 
 
 class PidTag(str): ...
