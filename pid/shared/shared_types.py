@@ -1,5 +1,4 @@
-from typing import NamedTuple, Optional, Type, Any
-
+from typing import NamedTuple, Type, Any
 
 __all__ = [
     'Dependency',

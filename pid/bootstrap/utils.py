@@ -1,9 +1,7 @@
-from typing import Type, TypeVar
+from typing import Type
 
 from .const import METADATA_ATTRIBUTE
-
 from ..shared import ClassIsNotInjectable, IMetaData
-
 
 
 def is_injectable[T](class_: Type[T]) -> bool:

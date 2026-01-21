@@ -3,14 +3,14 @@ from __future__ import annotations
 from copy import copy
 from typing import Type, Optional, Any, Callable
 
+from ..abstract import AbstractProvider
 from ..bootstrap.utils import get_metadata
-from ..pools import Unknown, ProvidersPool, ResolvePool
+from ..pools import ProvidersPool
 from ..shared import (
     IProvider, IModule,
     UndefinedExport, IMetaData,
     ResolveTreeMetadata,
 )
-from ..abstract import AbstractProvider
 
 
 class PidModule[T](AbstractProvider[T]):
@@ -19,11 +19,11 @@ class PidModule[T](AbstractProvider[T]):
     __instances__ = {}
 
     def __new__(
-        cls,
-        class_: Type[T],
-        imports: Optional[list[Any]] = None,
-        exports: Optional[list[Any]] = None,
-        providers: Optional[list[Any]] = None,
+            cls,
+            class_: Type[T],
+            imports: Optional[list[Any]] = None,
+            exports: Optional[list[Any]] = None,
+            providers: Optional[list[Any]] = None,
     ):
         return cls._get_or_create_instance(class_)
 
@@ -35,11 +35,11 @@ class PidModule[T](AbstractProvider[T]):
         return cls.__instances__.get(class_.__name__)
 
     def __init__(
-        self,
-        class_: Type[T],
-        imports: Optional[list[Any]] = None,
-        exports: Optional[list[Any]] = None,
-        providers: Optional[list[Any]] = None,
+            self,
+            class_: Type[T],
+            imports: Optional[list[Any]] = None,
+            exports: Optional[list[Any]] = None,
+            providers: Optional[list[Any]] = None,
     ) -> None:
         self.class_ = class_
         self._imports = self._initialize_imports(imports)
@@ -62,16 +62,16 @@ class PidModule[T](AbstractProvider[T]):
         self._inherit_providers_pool = ProvidersPool()
 
     def resolve(
-        self,
-        resolve_tree_metadata: ResolveTreeMetadata = None,
+            self,
+            resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> T:
         resolve_tree_metadata = resolve_tree_metadata or ResolveTreeMetadata([])
 
         return self._resolve(resolve_tree_metadata)
 
     def _resolve(
-        self,
-        resolve_tree_metadata: ResolveTreeMetadata = None,
+            self,
+            resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> T:
         resolve_tree_metadata.chain.append(self.class_.__name__)
 

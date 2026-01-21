@@ -12,8 +12,8 @@ class AbstractProvider[T](IProvider[T]):
     _factory: Optional[Callable[[*Any], T]]
 
     def resolve(
-        self,
-        resolve_tree_metadata: ResolveTreeMetadata = None,
+            self,
+            resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> T:
         return self._resolve(resolve_tree_metadata)
 
@@ -21,8 +21,8 @@ class AbstractProvider[T](IProvider[T]):
         raise NotImplementedError
 
     def _prepare(
-        self,
-        resolve_tree_metadata: ResolveTreeMetadata = None,
+            self,
+            resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> dict[str, Any]:
         dependencies = {}
 
@@ -37,17 +37,18 @@ class AbstractProvider[T](IProvider[T]):
         return dependencies
 
     def _get_provider_from_pools(
-        self,
-        marker: Any,
-        dependency_key: str,
-        resolve_tree_metadata: ResolveTreeMetadata = None,
+            self,
+            marker: Any,
+            dependency_key: str,
+            resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> Any:
         if self._own_providers_pool.has(marker):
             return self._own_providers_pool.get(marker)
         elif self._inherit_providers_pool.has(marker):
             return self._inherit_providers_pool.get(marker)
         else:
-            chain_str = "\n".join('\t'*i + f'^- {elem}' for i, elem in enumerate(reversed(resolve_tree_metadata.chain)))
+            chain_str = "\n".join(
+                '\t' * i + f'^- {elem}' for i, elem in enumerate(reversed(resolve_tree_metadata.chain)))
 
             raise CannotResolveDependency(
                 f'Error while trying resolving dependency:\n'

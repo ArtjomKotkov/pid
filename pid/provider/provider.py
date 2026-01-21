@@ -2,20 +2,20 @@ from __future__ import annotations
 
 from typing import Type, Optional, Callable, Any
 
-from ..bootstrap.utils import get_metadata
-from ..pools import Unknown, ProvidersPool, ResolvePool
-from ..shared import IProvider, ResolveTreeMetadata
 from ..abstract import AbstractProvider
+from ..bootstrap.utils import get_metadata
+from ..pools import ProvidersPool
+from ..shared import IProvider, ResolveTreeMetadata
 
 
 class Provider[T](AbstractProvider[T]):
     is_module = False
 
     def __init__(
-        self,
-        class_: Type[T],
-        providers: Optional[list[Type[T]]] = None,
-        factory: Optional[Callable[[*Type[Provider]], T]] = None
+            self,
+            class_: Type[T],
+            providers: Optional[list[Type[T]]] = None,
+            factory: Optional[Callable[[*Type[Provider]], T]] = None
     ):
         super().__init__()
 
@@ -35,16 +35,16 @@ class Provider[T](AbstractProvider[T]):
         self._inherit_providers_pool = pool
 
     def resolve(
-        self,
-        resolve_tree_metadata: ResolveTreeMetadata = None,
+            self,
+            resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> T:
         resolve_tree_metadata = resolve_tree_metadata or ResolveTreeMetadata([])
 
         return super().resolve(resolve_tree_metadata)
 
     def _resolve(
-        self,
-        resolve_tree_metadata: ResolveTreeMetadata = None,
+            self,
+            resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> T:
         resolve_tree_metadata.chain.append(self.class_.__name__)
 
@@ -55,7 +55,6 @@ class Provider[T](AbstractProvider[T]):
         resolved_provider = self._provide(resolve_tree_metadata)
         self._resolved_provider = resolved_provider
         return self._resolved_provider
-
 
     def _initialize_pools(self) -> None:
         self._own_providers_pool = self._make_own_providers_pool()

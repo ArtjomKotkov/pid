@@ -1,8 +1,7 @@
 from typing import Type
 
 from .utils import is_injectable, get_metadata
-
-from ..shared import ClassIsNotInjectable, ResolveTreeMetadata
+from ..shared import ClassIsNotInjectable
 
 
 class BootStrap:

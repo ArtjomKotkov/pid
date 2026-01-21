@@ -1,8 +1,6 @@
 from typing import Any, Hashable
 
-
 DictOfDicts = dict[Hashable, dict[str, Any] | Any]
-
 
 __all__ = [
     'merge_deep'

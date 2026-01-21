@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Callable, Type, Optional
 
-
 __all__ = [
     'IProvider',
     'IModule',
@@ -38,4 +37,3 @@ class IMetaData[T]:
     name: str
 
     make_providable: Callable[[], IProvider]
-

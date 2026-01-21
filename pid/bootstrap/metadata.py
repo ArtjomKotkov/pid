@@ -7,13 +7,13 @@ from ..shared import IProvider, IMetaData
 
 class MetaData[T](IMetaData[T]):
     def __init__(
-        self,
-        class_: Type[T],
-        is_module: bool,
-        imports: list[Any] = None,
-        exports: list[Any] = None,
-        providers: list[Any] = None,
-        factory: Optional[Callable[[*Type[Provider]], T]] = None
+            self,
+            class_: Type[T],
+            is_module: bool,
+            imports: list[Any] = None,
+            exports: list[Any] = None,
+            providers: list[Any] = None,
+            factory: Optional[Callable[[*Type[Provider]], T]] = None
     ):
         self.class_ = class_
         self.is_module = is_module
