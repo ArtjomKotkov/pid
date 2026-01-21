@@ -1,21 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Generic, TypeVar
-
-from .pool_types import Unknown
-
-from ..shared import ResolveTag
+from typing import Any
 
 
-T = TypeVar('T')
-
-
-class ResolvePool(Generic[T]):
+class ResolvePool[T]:
     def __init__(self):
-        self._dependencies: dict[ResolveTag, T] = {}
+        self._dependencies: list[T] = []
 
-    def add(self, resolved_dependency: Any, tag: ResolveTag = None) -> None:
-        self._dependencies[tag] = resolved_dependency
+    def add(self, resolved_dependency: Any) -> None:
+        self._dependencies.append(resolved_dependency)
 
-    def get(self, tag: ResolveTag = None) -> Any:
-        return self._dependencies.get(tag, Unknown)
+    def get(self) -> Any:
+        return self._dependencies

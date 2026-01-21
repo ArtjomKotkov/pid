@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import TypeVar, Generic, Any, Callable, Type, Optional
-
-T = TypeVar('T')
+from typing import Any, Callable, Type, Optional
 
 
 __all__ = [
@@ -12,25 +10,25 @@ __all__ = [
 ]
 
 
-class IProvider(Generic[T]):
+class IProvider[T]:
     class_: Any
 
     is_module: bool
     name: str
 
-    resolve: Callable[[Optional[str], Optional[Any]], T]
+    resolve: Callable[[Optional[Any]], T]
     set_providers_pool: Callable
 
     provider_method: Callable[[*Any], T]
     factory: Callable[[*Any], T]
 
 
-class IModule(IProvider[T]):
+class IModule[T](IProvider[T]):
     make_exports: Callable
     make_export_providers_pool: Callable
 
 
-class IMetaData:
+class IMetaData[T]:
     class_: Type[T]
     is_module: bool
     imports: list[Any]

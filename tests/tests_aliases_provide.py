@@ -1,5 +1,3 @@
-from typing import TypeVar, Generic
-
 import pytest
 
 from pid import BootStrap, Pid
@@ -24,11 +22,9 @@ def test_alias():
 
 
 def test_generic_alias():
-    T = TypeVar('T')
-
     class Model: ...
 
-    class Interface(Generic[T]): ...
+    class Interface[T]: ...
 
     @Pid.injectable()
     class TestProvider(Interface[Model]): ...
@@ -45,11 +41,9 @@ def test_generic_alias():
 
 
 def test_accurate_alias():
-    T = TypeVar('T')
-
     class Model: ...
 
-    class Interface(Generic[T]): ...
+    class Interface[T]: ...
 
     @Pid.injectable()
     class TestProvider(Interface[Model]): ...
@@ -64,11 +58,9 @@ def test_accurate_alias():
 
 
 def test_multiple_aliases_acquired():
-    T = TypeVar('T')
-
     class Model: ...
 
-    class Interface(Generic[T]): ...
+    class Interface[T]: ...
 
     @Pid.injectable()
     class TestProvider(Interface[Model]): ...
@@ -86,11 +78,9 @@ def test_multiple_aliases_acquired():
 
 
 def test_multiple_aliases_acquired_inverted():
-    T = TypeVar('T')
-
     class Model: ...
 
-    class Interface(Generic[T]): ...
+    class Interface[T]: ...
 
     @Pid.injectable()
     class TestProvider(Interface[Model]): ...
@@ -108,13 +98,11 @@ def test_multiple_aliases_acquired_inverted():
 
 
 def test_generic_alias_with_different_generic():
-    T = TypeVar('T')
-
     class Model: ...
 
     class Model2: ...
 
-    class Interface(Generic[T]): ...
+    class Interface[T]: ...
 
     @Pid.injectable()
     class TestProvider(Interface[Model]): ...
@@ -138,13 +126,11 @@ def test_generic_alias_with_different_generic():
 
 
 def test_generic_alias_with_different_generic_inverted():
-    T = TypeVar('T')
-
     class Model: ...
 
     class Model2: ...
 
-    class Interface(Generic[T]): ...
+    class Interface[T]: ...
 
     @Pid.injectable()
     class TestProvider(Interface[Model]): ...

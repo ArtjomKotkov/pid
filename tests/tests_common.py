@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import pytest
 
 from pid.shared import CannotResolveDependency, UndefinedExport, ClassIsNotInjectable
-from pid import BootStrap, Pid, Provider, Tag
+from pid import BootStrap, Pid, Provider
 
 
 class TestsCombinations:
@@ -558,73 +558,3 @@ class TestsUnresolvedDependencies:
                 assert isinstance(resolved_provider, TestProvider)
 
         BootStrap.resolve(TestModule)
-
-    def test_unresolved_dependency_resolve_with_tag(self):
-        @Pid.injectable()
-        class TestProvider: ...
-
-        @Pid.module(providers=[TestProvider])
-        class TestModule:
-            def __init__(self, unresolved_provider: Provider[TestProvider], provider: TestProvider):
-                resolved_provider = unresolved_provider.resolve('some_tag')
-
-                assert resolved_provider is not provider
-                assert isinstance(resolved_provider, TestProvider)
-
-        BootStrap.resolve(TestModule)
-
-    def test_unresolved_dependency_resolve_without_same_tag(self):
-        @Pid.injectable()
-        class TestProvider: ...
-
-        @Pid.module(providers=[TestProvider])
-        class TestModule:
-            def __init__(self, unresolved_provider: Provider[TestProvider], provider: TestProvider):
-                resolved_provider = unresolved_provider.resolve('some_tag')
-
-                assert resolved_provider is not provider
-                assert isinstance(resolved_provider, TestProvider)
-
-        BootStrap.resolve(TestModule)
-
-    def test_unresolved_dependency_provide_tag(self):
-        __tag__ = 'some_tag'
-
-        @Pid.injectable()
-        class TestProvider: ...
-
-        @Pid.module(providers=[TestProvider, Tag])
-        class TestModule:
-            def __init__(self, tag: Tag):
-                assert tag == __tag__
-
-        BootStrap.resolve(TestModule, tag=__tag__)
-
-    def test_unresolved_dependency_child_provide_tag(self):
-        __tag__store__ = []
-        __provider__store__ = []
-        __tag__ = 'some_tag'
-
-        @Pid.injectable()
-        class TestProvider:
-            def __init__(self, tag: Tag):
-                __tag__store__.append(tag)
-                __provider__store__.append(self)
-
-        @Pid.module(providers=[TestProvider, Tag])
-        class TestModule:
-            def __init__(self, unresolved_provider: Provider[TestProvider], _: TestProvider):
-                unresolved_provider.resolve(__tag__)
-
-        BootStrap.resolve(TestModule)
-
-        first_tag, second_tag = __tag__store__
-
-        assert first_tag is None
-        assert second_tag == __tag__
-
-        first_provider, second_provider = __provider__store__
-
-        assert first_provider is not None
-        assert second_provider is not None
-        assert first_provider is not second_provider

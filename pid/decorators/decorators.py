@@ -1,10 +1,7 @@
-from typing import Type, TypeVar, Optional, Callable, Any
+from typing import Type, Optional, Callable, Any
 
 from ..bootstrap.const import METADATA_ATTRIBUTE
 from ..bootstrap.metadata import MetaData
-
-
-T = TypeVar('T')
 
 
 class Pid:
@@ -15,7 +12,7 @@ class Pid:
         exports: Optional[Any] = None,
         providers: Optional[Any] = None,
     ) -> Callable:
-        def wrapper(class_: Type[T]) -> Type[T]:
+        def wrapper[T](class_: Type[T]) -> Type[T]:
 
             setattr(
                 class_,
@@ -34,7 +31,7 @@ class Pid:
         return wrapper
 
     @staticmethod
-    def injectable(
+    def injectable[T](
         *,
         providers: Optional[Any] = None,
         factory: Optional[Callable[[Any], T]] = None

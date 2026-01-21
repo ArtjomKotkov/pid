@@ -1,22 +1,19 @@
 from __future__ import annotations
 
 from copy import copy
-from typing import Type, TypeVar, Optional, Any, Callable
+from typing import Type, Optional, Any, Callable
 
 from ..bootstrap.utils import get_metadata
 from ..pools import Unknown, ProvidersPool, ResolvePool
 from ..shared import (
     IProvider, IModule,
     UndefinedExport, IMetaData,
-    ResolveTag, BootstrapMetaData,
+    ResolveTreeMetadata,
 )
 from ..abstract import AbstractProvider
 
 
-T = TypeVar('T')
-
-
-class PidModule(AbstractProvider[T]):
+class PidModule[T](AbstractProvider[T]):
     is_module = True
 
     __instances__ = {}
@@ -60,40 +57,37 @@ class PidModule(AbstractProvider[T]):
         return [get_metadata(provider_).make_providable() for provider_ in providers] if providers else []
 
     def _initialize_pools(self) -> None:
-        self._resolve_pool = ResolvePool()
+        self._resolved_module = None
         self._own_providers_pool = ProvidersPool()
         self._inherit_providers_pool = ProvidersPool()
 
     def resolve(
         self,
-        tag: ResolveTag = None,
-        bmeta: BootstrapMetaData = None,
+        resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> T:
-        return self._resolve(tag, bmeta)
+        resolve_tree_metadata = resolve_tree_metadata or ResolveTreeMetadata([])
+
+        return self._resolve(resolve_tree_metadata)
 
     def _resolve(
         self,
-        tag: ResolveTag = None,
-        bmeta: BootstrapMetaData = None,
+        resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> T:
-        bmeta.chain.append(self.class_.__name__)
+        resolve_tree_metadata.chain.append(self.class_.__name__)
 
-        if (resolved_module := self._get_from_resolve_pool(tag)) is not Unknown:
-            return resolved_module
+        if self._resolved_module:
+            return self._resolved_module
 
-        self._resolve_imports(tag, bmeta)
+        self._resolve_imports(resolve_tree_metadata)
         self._update_provider_pools()
-        resolved_module = self._provide(tag, bmeta)
-        self._resolve_pool.add(resolved_module, tag)
+        resolved_module = self._provide(resolve_tree_metadata)
+        self._resolved_module = resolved_module
 
-        return resolved_module
+        return self._resolved_module
 
-    def _get_from_resolve_pool(self, tag: ResolveTag) -> T:
-        return self._resolve_pool.get(tag)
-
-    def _resolve_imports(self, tag: ResolveTag, bmeta: BootstrapMetaData) -> None:
+    def _resolve_imports(self, resolve_tree_metadata: ResolveTreeMetadata) -> None:
         for module in self._imports:
-            module.resolve(tag, copy(bmeta))
+            module.resolve(copy(resolve_tree_metadata))
             export_pool = ProvidersPool.from_providers(module.make_exports())
             self._inherit_providers_pool.merge(export_pool)
 

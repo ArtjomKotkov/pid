@@ -1,42 +1,38 @@
 from __future__ import annotations
 
-from typing import TypeVar, Any, get_type_hints, get_origin, get_args, Callable, Optional
+from typing import Any, get_type_hints, get_origin, get_args, Callable, Optional
 
 from ..pools import ProvidersPool
-from ..shared import IProvider, Dependency, CannotResolveDependency, ResolveTag, BootstrapMetaData
-
-T = TypeVar('T')
+from ..shared import IProvider, Dependency, CannotResolveDependency, ResolveTreeMetadata
 
 
-class AbstractProvider(IProvider[T]):
+class AbstractProvider[T](IProvider[T]):
     _own_providers_pool: ProvidersPool
     _inherit_providers_pool: ProvidersPool
     _factory: Optional[Callable[[*Any], T]]
 
     def resolve(
         self,
-        tag: ResolveTag = None,
-        bmeta: BootstrapMetaData = None,
+        resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> T:
-        return self._resolve(tag, bmeta)
+        return self._resolve(resolve_tree_metadata)
 
-    def _resolve(self, tag):
+    def _resolve(self, resolve_tree_metadata: ResolveTreeMetadata = None) -> T:
         raise NotImplementedError
 
     def _prepare(
         self,
-        tag: ResolveTag = None,
-        bmeta: BootstrapMetaData = None,
+        resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> dict[str, Any]:
         dependencies = {}
 
         for key, dependency in self.dependencies.items():
-            provider = self._get_provider_from_pools(dependency.marker, key, bmeta)
+            provider = self._get_provider_from_pools(dependency.marker, key, resolve_tree_metadata)
 
             if dependency.raw:
                 dependencies[key] = provider
             else:
-                dependencies[key] = provider.resolve(tag, bmeta)
+                dependencies[key] = provider.resolve(resolve_tree_metadata)
 
         return dependencies
 
@@ -44,14 +40,14 @@ class AbstractProvider(IProvider[T]):
         self,
         marker: Any,
         dependency_key: str,
-        bmeta: BootstrapMetaData = None,
+        resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> Any:
         if self._own_providers_pool.has(marker):
             return self._own_providers_pool.get(marker)
         elif self._inherit_providers_pool.has(marker):
             return self._inherit_providers_pool.get(marker)
         else:
-            chain_str = "\n".join('\t'*i + f'^- {elem}' for i, elem in enumerate(reversed(bmeta.chain)))
+            chain_str = "\n".join('\t'*i + f'^- {elem}' for i, elem in enumerate(reversed(resolve_tree_metadata.chain)))
 
             raise CannotResolveDependency(
                 f'Error while trying resolving dependency:\n'
@@ -59,8 +55,8 @@ class AbstractProvider(IProvider[T]):
                 f'{chain_str}'
             )
 
-    def _provide(self, tag: ResolveTag = None, bmeta: BootstrapMetaData = None) -> T:
-        dependencies = self._prepare(tag, bmeta)
+    def _provide(self, resolve_tree_metadata: ResolveTreeMetadata = None) -> T:
+        dependencies = self._prepare(resolve_tree_metadata)
         return self.factory(**dependencies)
 
     @property

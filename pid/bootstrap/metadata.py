@@ -1,14 +1,11 @@
-from typing import Any, Type, TypeVar, Optional, Callable
+from typing import Any, Type, Optional, Callable
 
 from ..module import PidModule
 from ..provider import Provider
 from ..shared import IProvider, IMetaData
 
 
-T = TypeVar('T')
-
-
-class MetaData(IMetaData):
+class MetaData[T](IMetaData[T]):
     def __init__(
         self,
         class_: Type[T],

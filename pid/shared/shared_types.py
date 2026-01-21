@@ -3,9 +3,7 @@ from typing import NamedTuple, Optional, Type, Any
 
 __all__ = [
     'Dependency',
-    'PidTag',
-    'ResolveTag',
-    'BootstrapMetaData',
+    'ResolveTreeMetadata',
 ]
 
 
@@ -14,11 +12,5 @@ class Dependency(NamedTuple):
     marker: Type[Any]
 
 
-class PidTag(str): ...
-
-
-ResolveTag = Optional[PidTag]
-
-
-class BootstrapMetaData(NamedTuple):
+class ResolveTreeMetadata(NamedTuple):
     chain: list[Any]

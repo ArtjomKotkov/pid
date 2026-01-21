@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-from typing import Type, TypeVar, Optional, Callable, Any
+from typing import Type, Optional, Callable, Any
 
 from ..bootstrap.utils import get_metadata
 from ..pools import Unknown, ProvidersPool, ResolvePool
-from ..shared import IProvider, ResolveTag, PidTag, BootstrapMetaData
+from ..shared import IProvider, ResolveTreeMetadata
 from ..abstract import AbstractProvider
 
 
-T = TypeVar('T')
-
-
-class Provider(AbstractProvider[T]):
+class Provider[T](AbstractProvider[T]):
     is_module = False
 
     def __init__(
@@ -30,7 +27,7 @@ class Provider(AbstractProvider[T]):
 
         self._factory = factory
 
-        self._resolve_pool = ResolvePool()
+        self._resolved_provider: Optional[T] = None
         self._own_providers_pool = ProvidersPool()
         self._inherit_providers_pool = ProvidersPool()
 
@@ -39,33 +36,26 @@ class Provider(AbstractProvider[T]):
 
     def resolve(
         self,
-        tag: ResolveTag = None,
-        bmeta: BootstrapMetaData = None,
+        resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> T:
-        if self.class_ == PidTag:
-            return tag
+        resolve_tree_metadata = resolve_tree_metadata or ResolveTreeMetadata([])
 
-        return super().resolve(tag, bmeta)
+        return super().resolve(resolve_tree_metadata)
 
     def _resolve(
         self,
-        tag: ResolveTag = None,
-        bmeta: BootstrapMetaData = None,
+        resolve_tree_metadata: ResolveTreeMetadata = None,
     ) -> T:
-        bmeta.chain.append(self.class_.__name__)
+        resolve_tree_metadata.chain.append(self.class_.__name__)
 
-        cached_dependency = self._get_cached_dependency(tag)
-        if cached_dependency is not Unknown:
-            return cached_dependency
+        if self._resolved_provider:
+            return self._resolved_provider
 
         self._initialize_pools()
-        resolved_provider = self._resolve_provider(tag, bmeta)
-        self._cache_resolved_provider(resolved_provider, tag)
+        resolved_provider = self._provide(resolve_tree_metadata)
+        self._resolved_provider = resolved_provider
+        return self._resolved_provider
 
-        return resolved_provider
-
-    def _get_cached_dependency(self, tag: ResolveTag) -> T:
-        return self._resolve_pool.get(tag)
 
     def _initialize_pools(self) -> None:
         self._own_providers_pool = self._make_own_providers_pool()
@@ -73,12 +63,6 @@ class Provider(AbstractProvider[T]):
 
         for provider in self._providers:
             provider.set_providers_pool(child_providers_pool)
-
-    def _resolve_provider(self, tag: ResolveTag, bmeta: BootstrapMetaData) -> T:
-        return self._provide(tag, bmeta)
-
-    def _cache_resolved_provider(self, provider: T, tag: ResolveTag) -> None:
-        self._resolve_pool.add(provider, tag)
 
     def _make_own_providers_pool(self) -> ProvidersPool:
         pool = ProvidersPool()
