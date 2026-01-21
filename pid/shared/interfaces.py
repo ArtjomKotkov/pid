@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TypeVar, Generic, Any, Callable, Type, Optional
 
-
 T = TypeVar('T')
 
 
@@ -19,7 +18,7 @@ class IProvider(Generic[T]):
     is_module: bool
     name: str
 
-    resolve: Callable[[Optional[str]], T]
+    resolve: Callable[[Optional[str], Optional[Any]], T]
     set_providers_pool: Callable
 
     provider_method: Callable[[*Any], T]
@@ -41,3 +40,4 @@ class IMetaData:
     name: str
 
     make_providable: Callable[[], IProvider]
+

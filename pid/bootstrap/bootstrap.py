@@ -2,8 +2,7 @@ from typing import Type, TypeVar
 
 from .utils import is_injectable, get_metadata
 
-from ..shared import ClassIsNotInjectable, ResolveTag
-
+from ..shared import ClassIsNotInjectable, ResolveTag, BootstrapMetaData
 
 T = TypeVar('T')
 
@@ -18,4 +17,8 @@ class BootStrap:
         metadata = get_metadata(class_)
         providable = metadata.make_providable()
 
-        return providable.resolve(tag)
+        bmeta = BootstrapMetaData(
+            chain=[]
+        )
+
+        return providable.resolve(tag=tag, bmeta=bmeta)

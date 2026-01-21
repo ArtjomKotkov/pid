@@ -5,6 +5,7 @@ __all__ = [
     'Dependency',
     'PidTag',
     'ResolveTag',
+    'BootstrapMetaData',
 ]
 
 
@@ -17,3 +18,7 @@ class PidTag(str): ...
 
 
 ResolveTag = Optional[PidTag]
+
+
+class BootstrapMetaData(NamedTuple):
+    chain: list[Any]
